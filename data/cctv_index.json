@@ -1,0 +1,11 @@
+{
+  "서울 종로구": [
+    {
+      "region": "서울 종로구",
+      "name": "임시 CCTV",
+      "provider": "UTIC",
+      "cctvid": "TEST",
+      "url": "https://www.utic.go.kr/"
+    }
+  ]
+}
