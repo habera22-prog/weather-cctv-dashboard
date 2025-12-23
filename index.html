@@ -38,7 +38,7 @@
     document.getElementById("title").innerText = "📍 " + region + " CCTV";
   }
 
-  fetch("./data/cctv_index.json")
+  fetch("./data/cctv_index.json?ts=" + Date.now())
     .then(res => res.json())
     .then(data => {
       const rows = data[region] || [];
