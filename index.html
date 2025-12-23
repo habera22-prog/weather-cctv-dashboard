@@ -52,8 +52,8 @@
       list.innerHTML = rows.map(r => `
         <div class="item">
           <div>
-            <b>${r.name}</b><br/>
-            <small>${r.provider}</small>
+           <b>${r.name || r["이름"]}</b>
+           <small>${r.provider || r["공급자"]}</small>
           </div>
           <button onclick="window.open('${r.url}', '_blank')">
             새창 재생
