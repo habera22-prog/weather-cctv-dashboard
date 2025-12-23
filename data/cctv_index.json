@@ -2,9 +2,90 @@
   "서울 종로구": [
     {
       "region": "서울 종로구",
-      "name": "임시 CCTV",
+      "name": "UTIC 메인(샘플)",
       "provider": "UTIC",
-      "cctvid": "TEST",
+      "cctvid": "SAMPLE",
+      "url": "https://www.utic.go.kr/"
+    }
+  ],
+  "서울 중구": [
+    {
+      "region": "서울 중구",
+      "name": "UTIC 메인(샘플)",
+      "provider": "UTIC",
+      "cctvid": "SAMPLE",
+      "url": "https://www.utic.go.kr/"
+    }
+  ],
+  "인천 중구": [
+    {
+      "region": "인천 중구",
+      "name": "UTIC 메인(샘플)",
+      "provider": "UTIC",
+      "cctvid": "SAMPLE",
+      "url": "https://www.utic.go.kr/"
+    }
+  ],
+  "수원시 팔달구": [
+    {
+      "region": "수원시 팔달구",
+      "name": "UTIC 메인(샘플)",
+      "provider": "UTIC",
+      "cctvid": "SAMPLE",
+      "url": "https://www.utic.go.kr/"
+    }
+  ],
+  "부산진구": [
+    {
+      "region": "부산진구",
+      "name": "UTIC 메인(샘플)",
+      "provider": "UTIC",
+      "cctvid": "SAMPLE",
+      "url": "https://www.utic.go.kr/"
+    }
+  ],
+  "대구 중구": [
+    {
+      "region": "대구 중구",
+      "name": "UTIC 메인(샘플)",
+      "provider": "UTIC",
+      "cctvid": "SAMPLE",
+      "url": "https://www.utic.go.kr/"
+    }
+  ],
+  "광주 서구": [
+    {
+      "region": "광주 서구",
+      "name": "UTIC 메인(샘플)",
+      "provider": "UTIC",
+      "cctvid": "SAMPLE",
+      "url": "https://www.utic.go.kr/"
+    }
+  ],
+  "대전 중구": [
+    {
+      "region": "대전 중구",
+      "name": "UTIC 메인(샘플)",
+      "provider": "UTIC",
+      "cctvid": "SAMPLE",
+      "url": "https://www.utic.go.kr/"
+    }
+  ],
+  "강릉시": [
+    {
+      "region": "강릉시",
+      "name": "UTIC 메인(샘플)",
+      "provider": "UTIC",
+      "cctvid": "SAMPLE",
+      "url": "https://www.utic.go.kr/"
+    }
+  ],
+  "제주시": [
+    {
+      "region": "제주시",
+      "name": "UTIC 메인(샘플)",
+      "provider": "UTIC",
+      "cctvid": "SAMPLE",
       "url": "https://www.utic.go.kr/"
     }
   ]
