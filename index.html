@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>CCTV 대시보드</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, "Malgun Gothic", Arial, sans-serif;
+      margin: 20px;
+    }
+    h2 { margin-bottom: 10px; }
+    .item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    button {
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+    .empty {
+      color: #666;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h2 id="title">CCTV 대시보드</h2>
+  <div id="list">불러오는 중…</div>
+
+<script>
+  const params = new URLSearchParams(location.search);
+  const region = params.get("region");
+
+  if (region) {
+    document.getElementById("title").innerText = "📍 " + region + " CCTV";
+  }
+
+  fetch("./data/cctv_index.json")
+    .then(res => res.json())
+    .then(data => {
+      const rows = data[region] || [];
+      const list = document.getElementById("list");
+
+      if (rows.length === 0) {
+        list.innerHTML = '<div class="empty">등록된 CCTV가 없습니다.</div>';
+        return;
+      }
+
+      list.innerHTML = rows.map(r => `
+        <div class="item">
+          <div>
+            <b>${r.name}</b><br/>
+            <small>${r.provider}</small>
+          </div>
+          <button onclick="window.open('${r.url}', '_blank')">
+            새창 재생
+          </button>
+        </div>
+      `).join("");
+    })
+    .catch(() => {
+      document.getElementById("list").innerText = "데이터 로드 실패";
+    });
+</script>
+</body>
+</html>
