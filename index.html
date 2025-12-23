@@ -41,7 +41,7 @@
   fetch("./data/cctv_index.json?ts=" + Date.now())
     .then(res => res.json())
     .then(data => {
-      const rows = data[region] || [];
+      const rows = data[region] || data[decodeURIComponent(region)] || [];
       const list = document.getElementById("list");
 
       if (rows.length === 0) {
