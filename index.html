@@ -12,11 +12,11 @@
     .wrap { display: grid; grid-template-columns: 260px 1fr; gap: 14px; }
     @media (max-width: 860px){ .wrap { grid-template-columns: 1fr; } }
     .panel { border:1px solid #eee; border-radius:10px; overflow:hidden; }
-    .panel h3 { margin:0; padding:10px 12px; background:#fafafa; border-bottom:1px solid #eee; font-size:14px; }
+    .panel h3 { margin:0; padding:10px 12px; background:#fafafa; border-bottom:1px solid #eee; font-size:14px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
     .regions { max-height: 70vh; overflow:auto; }
     .regions button {
-      width:100%; text-align:left; padding:10px 12px; border:0; background:#fff;
-      border-bottom:1px solid #f3f3f3; cursor:pointer;
+      width:100%; text-align:left; padding:10px 12px; border:0; background:#fff; border-bottom:1px solid #f3f3f3;
+      cursor:pointer;
     }
     .regions button.active { background:#f0f7ff; font-weight:700; }
     .list { padding: 6px 0; }
@@ -26,167 +26,342 @@
     }
     .item small { color:#666; }
     .btn {
-      padding: 8px 10px; cursor:pointer; border:1px solid #ddd;
-      background:#fff; border-radius:8px;
+      padding: 8px 10px; cursor:pointer; border:1px solid #ddd; background:#fff; border-radius:8px;
     }
     .btn:hover { background:#fafafa; }
     .empty { color:#666; padding: 14px 12px; }
     .count { color:#666; font-size:12px; }
+    .hint { padding:8px 12px; font-size:11px; color:#777; border-top:1px solid #f3f3f3; background:#fff; }
+    .bar { margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap; }
   </style>
 </head>
 
 <body>
-<h2>CCTV 대시보드</h2>
+  <h2 id="title">CCTV 대시보드</h2>
 
-<div class="topbar">
-  <input id="q" type="search" placeholder="검색: 지역/이름/제공자" />
-  <span class="count" id="count"></span>
-</div>
-
-<!-- ✅ 메일 기준 12개 권역 -->
-<div id="broadBar" style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap;">
-  <button class="btn" data-broad="">전체</button>
-  <button class="btn" data-broad="수도권(서울)">수도권(서울)</button>
-  <button class="btn" data-broad="수도권(경기)">수도권(경기)</button>
-  <button class="btn" data-broad="수도권(인천)">수도권(인천)</button>
-  <button class="btn" data-broad="강원(영서)">강원(영서)</button>
-  <button class="btn" data-broad="강원(영동)">강원(영동)</button>
-  <button class="btn" data-broad="충청(충남)">충청(충남)</button>
-  <button class="btn" data-broad="충청(충북)">충청(충북)</button>
-  <button class="btn" data-broad="호남(전북)">호남(전북)</button>
-  <button class="btn" data-broad="호남(전남)">호남(전남)</button>
-  <button class="btn" data-broad="영남(경북)">영남(경북)</button>
-  <button class="btn" data-broad="영남(경남)">영남(경남)</button>
-  <button class="btn" data-broad="제주">제주</button>
-</div>
-
-<div class="wrap">
-  <div class="panel">
-    <h3>지역</h3>
-    <div class="regions" id="regions">불러오는 중…</div>
+  <div class="topbar">
+    <input id="q" type="search" placeholder="검색: 지역/이름/제공자" />
+    <span class="count" id="count"></span>
   </div>
 
-  <div class="panel">
-    <h3 id="listTitle">목록</h3>
-    <div class="list" id="list">불러오는 중…</div>
+  <!-- ✅ 메일 12권역 상단 버튼 -->
+  <div id="broadBar" class="bar">
+    <button class="btn" data-broad="">전체</button>
+    <button class="btn" data-broad="수도권(서울)">수도권(서울)</button>
+    <button class="btn" data-broad="수도권(경기)">수도권(경기)</button>
+    <button class="btn" data-broad="수도권(인천)">수도권(인천)</button>
+    <button class="btn" data-broad="강원(영서)">강원(영서)</button>
+    <button class="btn" data-broad="강원(영동)">강원(영동)</button>
+    <button class="btn" data-broad="충청(충남)">충청(충남)</button>
+    <button class="btn" data-broad="충청(충북)">충청(충북)</button>
+    <button class="btn" data-broad="호남(전북)">호남(전북)</button>
+    <button class="btn" data-broad="호남(전남)">호남(전남)</button>
+    <button class="btn" data-broad="영남(경북)">영남(경북)</button>
+    <button class="btn" data-broad="영남(경남)">영남(경남)</button>
+    <button class="btn" data-broad="제주">제주</button>
   </div>
-</div>
+
+  <div class="wrap">
+    <div class="panel">
+      <h3>
+        <span id="leftTitle">권역(메일 12)</span>
+        <button id="toggleLeft" class="btn" type="button">전체 지역 보기</button>
+      </h3>
+      <div class="regions" id="regions">불러오는 중…</div>
+      <div class="hint" id="leftHint">※ 기본 노출: 메일에서 사용하는 12권역 기준</div>
+    </div>
+
+    <div class="panel">
+      <h3 id="listTitle">목록</h3>
+      <div class="list" id="list">불러오는 중…</div>
+    </div>
+  </div>
 
 <script>
-/* ===================== 기본 변수 ===================== */
-const $regions = document.getElementById("regions");
-const $list = document.getElementById("list");
-const $q = document.getElementById("q");
-const $count = document.getElementById("count");
-const $listTitle = document.getElementById("listTitle");
-const $broadBar = document.getElementById("broadBar");
+  // =========================
+  // 1) 기본 설정
+  // =========================
+  const DEFAULT_BROADS = [
+    "수도권(서울)","수도권(경기)","수도권(인천)",
+    "강원(영서)","강원(영동)",
+    "충청(충남)","충청(충북)",
+    "호남(전북)","호남(전남)",
+    "영남(경북)","영남(경남)",
+    "제주"
+  ];
 
-let DB = {};
-let currentRegion = null;
-let currentBroad = "";
+  const GYEONGGI_CITIES = ["수원","성남","용인","고양","부천","안산","안양","남양주","화성","평택","의정부","시흥","파주","광명","김포","군포","이천","오산","구리","포천","양주","하남","동두천","여주","과천","가평","양평","연천"];
+  const GW_YEONGDONG = ["강릉","속초","동해","삼척","태백","고성","양양"];
+  const GW_YEONGSEO = ["춘천","원주","홍천","횡성","영월","정선","철원","화천","인제","평창"];
+  const CN_CITIES = ["대전","세종","천안","아산","공주","논산","계룡","당진","서산","보령","홍성","예산","서천","청양","태안","금산"];
+  const CB_CITIES = ["청주","충주","제천","진천","음성","괴산","증평","보은","옥천","영동","단양"];
+  const JB_CITIES = ["전주","익산","군산","정읍","남원","김제","완주","진안","무주","장수","임실","순창","고창","부안"];
+  const JN_CITIES = ["광주","목포","여수","순천","나주","광양","담양","곡성","구례","고흥","보성","화순","장흥","강진","해남","영암","무안","함평","영광","장성","완도","진도","신안"];
+  const GB_CITIES = ["대구","포항","경주","김천","안동","구미","영주","영천","상주","문경","경산","울진","울릉","청송","영덕","예천","봉화","의성","칠곡","성주","고령","군위"];
+  const GN_CITIES = ["부산","울산","창원","김해","진주","양산","거제","통영","사천","밀양","함안","창녕","고성","남해","하동","산청","함양","거창","합천"];
 
-/* ===================== 유틸 ===================== */
-function normalize(s){ return String(s || "").toLowerCase(); }
-
-function flatten(db){
-  const out = [];
-  Object.keys(db || {}).forEach(region => {
-    (db[region] || []).forEach(row => out.push({ region, ...row }));
-  });
-  return out;
-}
-
-/* ===================== 좌측 지역 ===================== */
-function renderRegions(){
-  const regions = Object.keys(DB).sort();
-  const total = flatten(DB).length;
-
-  $regions.innerHTML = [
-    `<button data-region="" class="${currentRegion===null?'active':''}">
-      전체 보기 <span class="count">(${total})</span>
-     </button>`,
-    ...regions.map(r => `
-      <button data-region="${r}" class="${currentRegion===r?'active':''}">
-        ${r} <span class="count">(${DB[r].length})</span>
-      </button>
-    `),
-    `<div style="padding:8px 12px; font-size:11px; color:#777;">
-      ※ 좌측은 <b>전체 CCTV 기준</b> (178개 이상 자동 확장)
-     </div>`
-  ].join("");
-
-  $regions.querySelectorAll("button[data-region]").forEach(btn => {
-    btn.onclick = () => {
-      const r = btn.getAttribute("data-region");
-      currentRegion = r || null;
-      renderRegions();
-      renderList();
-    };
-  });
-}
-
-/* ===================== 우측 리스트 ===================== */
-function renderList(){
-  const query = normalize($q.value);
-  let rows = flatten(DB);
-
-  if (currentBroad) {
-    rows = rows.filter(x => (x.region || "").includes(currentBroad));
-  }
-  if (currentRegion) {
-    rows = rows.filter(x => x.region === currentRegion);
-  }
-  if (query) {
-    rows = rows.filter(x =>
-      normalize(x.region).includes(query) ||
-      normalize(x.name).includes(query) ||
-      normalize(x.provider).includes(query)
-    );
+  function normalize(s){ return String(s || "").toLowerCase(); }
+  function prefixOfRegion(region){
+    // "서울 종로구" => "서울", "수원시 팔달구" => "수원시"
+    return String(region || "").trim().split(/\s+/)[0] || "";
   }
 
-  $listTitle.textContent = currentRegion ? `목록 - ${currentRegion}` : "목록 - 전체";
-  $count.textContent = `표시: ${rows.length}개`;
+  // region(예: "서울 종로구") -> broad(예: "수도권(서울)")
+  function regionToBroad(region){
+    const r = String(region || "");
+    const p = prefixOfRegion(r);
 
-  if (!rows.length){
-    $list.innerHTML = `<div class="empty">조건에 맞는 CCTV가 없습니다.</div>`;
-    return;
+    if (p === "서울") return "수도권(서울)";
+    if (p === "인천") return "수도권(인천)";
+    if (p === "제주" || r.includes("제주")) return "제주";
+
+    // 경기
+    for (const c of GYEONGGI_CITIES) if (r.startsWith(c)) return "수도권(경기)";
+    if (r.includes("경기")) return "수도권(경기)";
+
+    // 강원
+    for (const c of GW_YEONGDONG) if (r.startsWith(c)) return "강원(영동)";
+    for (const c of GW_YEONGSEO) if (r.startsWith(c)) return "강원(영서)";
+    if (r.includes("강원")) return "강원(영서)";
+
+    // 충청
+    for (const c of CN_CITIES) if (r.startsWith(c)) return "충청(충남)";
+    for (const c of CB_CITIES) if (r.startsWith(c)) return "충청(충북)";
+    if (r.includes("충남")) return "충청(충남)";
+    if (r.includes("충북")) return "충청(충북)";
+
+    // 호남
+    for (const c of JB_CITIES) if (r.startsWith(c)) return "호남(전북)";
+    for (const c of JN_CITIES) if (r.startsWith(c)) return "호남(전남)";
+    if (r.includes("전북")) return "호남(전북)";
+    if (r.includes("전남")) return "호남(전남)";
+
+    // 영남
+    for (const c of GB_CITIES) if (r.startsWith(c)) return "영남(경북)";
+    for (const c of GN_CITIES) if (r.startsWith(c)) return "영남(경남)";
+    if (r.includes("경북")) return "영남(경북)";
+    if (r.includes("경남")) return "영남(경남)";
+
+    // 못 맞추면 기타로(일단 전체에서만 보이게)
+    return "기타";
   }
 
-  $list.innerHTML = rows.map(r => `
-    <div class="item">
-      <div>
-        <b>${r.name}</b><br/>
-        <small>${r.region} · ${r.provider}</small>
+  function flatten(db){
+    const out = [];
+    Object.keys(db || {}).forEach(region => {
+      (db[region] || []).forEach(row => {
+        out.push({
+          ...row,
+          regionKey: region,              // DB key
+          region: row.region || region,   // 표시용
+          broad: regionToBroad(region)
+        });
+      });
+    });
+    return out;
+  }
+
+  // =========================
+  // 2) DOM
+  // =========================
+  const $regions   = document.getElementById("regions");
+  const $list      = document.getElementById("list");
+  const $q         = document.getElementById("q");
+  const $count     = document.getElementById("count");
+  const $listTitle = document.getElementById("listTitle");
+  const $broadBar  = document.getElementById("broadBar");
+  const $toggleLeft= document.getElementById("toggleLeft");
+  const $leftTitle = document.getElementById("leftTitle");
+  const $leftHint  = document.getElementById("leftHint");
+
+  // =========================
+  // 3) 상태
+  // =========================
+  let DB = {};
+  let currentBroad = "";     // "" = 전체
+  let leftMode = "broad";    // "broad"(12권역) or "all"(전체 지역)
+  let currentRegionKey = ""; // leftMode="all"일 때만 사용
+
+  // =========================
+  // 4) 렌더링
+  // =========================
+  function renderLeft(){
+    const rows = flatten(DB);
+    const total = rows.length;
+
+    if (leftMode === "broad") {
+      $leftTitle.textContent = "권역(메일 12)";
+      $leftHint.textContent = "※ 기본 노출: 메일에서 사용하는 12권역 기준";
+      $toggleLeft.textContent = "전체 지역 보기";
+
+      // broad별 count
+      const counts = {};
+      for (const b of DEFAULT_BROADS) counts[b] = 0;
+      rows.forEach(r => { if (counts[r.broad] != null) counts[r.broad]++; });
+
+      $regions.innerHTML = [
+        `<button data-broad="" class="${currentBroad==="" ? "active":""}">전체 보기 <span class="count">(${total})</span></button>`,
+        ...DEFAULT_BROADS.map(b => {
+          const n = counts[b] || 0;
+          const active = (currentBroad === b) ? "active" : "";
+          return `<button data-broad="${b}" class="${active}">${b} <span class="count">(${n})</span></button>`;
+        })
+      ].join("");
+
+      $regions.querySelectorAll("button[data-broad]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          currentRegionKey = ""; // broad모드에서는 지역키 해제
+          currentBroad = btn.getAttribute("data-broad") || "";
+          syncBroadButtons();
+          renderList();
+          renderLeft(); // active 표시 갱신
+        });
+      });
+
+    } else {
+      // 전체 지역(178+) 보기
+      $leftTitle.textContent = "지역(전체)";
+      $leftHint.textContent = "※ DB에 등록된 전체 지역 목록(178+ 확장 가능)";
+      $toggleLeft.textContent = "메일 12권역 보기";
+
+      const regionKeys = Object.keys(DB || {}).sort();
+      $regions.innerHTML = [
+        `<button data-region="" class="${currentRegionKey==="" ? "active":""}">전체 보기 <span class="count">(${total})</span></button>`,
+        ...regionKeys.map(k => {
+          const n = (DB[k] || []).length;
+          const active = (currentRegionKey === k) ? "active" : "";
+          return `<button data-region="${k}" class="${active}">${k} <span class="count">(${n})</span></button>`;
+        })
+      ].join("");
+
+      $regions.querySelectorAll("button[data-region]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          currentBroad = ""; // 전체 지역 모드에서는 broad 해제
+          syncBroadButtons();
+          currentRegionKey = btn.getAttribute("data-region") || "";
+          renderList();
+          renderLeft();
+        });
+      });
+    }
+  }
+
+  function syncBroadButtons(){
+    if (!$broadBar) return;
+    $broadBar.querySelectorAll("button[data-broad]").forEach(b => {
+      const val = b.getAttribute("data-broad") || "";
+      b.style.fontWeight = (val === currentBroad) ? "700" : "400";
+      b.style.background = (val === currentBroad) ? "#f0f7ff" : "#fff";
+    });
+  }
+
+  function renderList(){
+    const query = normalize($q.value);
+    const all = flatten(DB);
+
+    let rows = all;
+
+    // leftMode에 따라 필터가 달라짐
+    if (leftMode === "broad") {
+      if (currentBroad) rows = rows.filter(x => x.broad === currentBroad);
+    } else {
+      if (currentRegionKey) rows = rows.filter(x => x.regionKey === currentRegionKey);
+    }
+
+    if (query) {
+      rows = rows.filter(x =>
+        normalize(x.region).includes(query) ||
+        normalize(x.name).includes(query) ||
+        normalize(x.provider).includes(query) ||
+        normalize(x.broad).includes(query)
+      );
+    }
+
+    const title =
+      leftMode === "broad"
+        ? (currentBroad ? `목록 - ${currentBroad}` : "목록 - 전체")
+        : (currentRegionKey ? `목록 - ${currentRegionKey}` : "목록 - 전체");
+
+    $listTitle.textContent = title;
+    $count.textContent = `표시: ${rows.length}개`;
+
+    if (!rows.length){
+      $list.innerHTML = `<div class="empty">조건에 맞는 CCTV가 없습니다.</div>`;
+      return;
+    }
+
+    $list.innerHTML = rows.map(r => `
+      <div class="item">
+        <div>
+          <b>${r.name || "-"}</b><br/>
+          <small>${r.region} · ${r.provider || "-"} · ${r.broad || "-"}</small>
+        </div>
+        <button class="btn" data-url="${(r.url || "").replaceAll('"','&quot;')}">새창 재생</button>
       </div>
-      <button class="btn" onclick="window.open('${r.url}','_blank')">
-        새창 재생
-      </button>
-    </div>
-  `).join("");
-}
+    `).join("");
 
-/* ===================== 이벤트 ===================== */
-$q.oninput = renderList;
+    $list.querySelectorAll("button[data-url]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const url = btn.getAttribute("data-url");
+        if (!url) return;
+        window.open(url, "_blank", "noopener,noreferrer");
+      });
+    });
+  }
 
-$broadBar.querySelectorAll("button[data-broad]").forEach(btn => {
-  btn.onclick = () => {
-    currentBroad = btn.getAttribute("data-broad") || "";
+  // =========================
+  // 5) 이벤트
+  // =========================
+  $q.addEventListener("input", renderList);
+
+  if ($broadBar) {
+    $broadBar.querySelectorAll("button[data-broad]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        leftMode = "broad";      // 상단 누르면 broad 모드로
+        currentRegionKey = "";
+        currentBroad = btn.getAttribute("data-broad") || "";
+        syncBroadButtons();
+        renderLeft();
+        renderList();
+      });
+    });
+  }
+
+  $toggleLeft.addEventListener("click", () => {
+    if (leftMode === "broad") {
+      leftMode = "all";
+      currentBroad = "";
+      syncBroadButtons();
+    } else {
+      leftMode = "broad";
+      currentRegionKey = "";
+    }
+    renderLeft();
     renderList();
-  };
-});
-
-/* ===================== 데이터 로드 ===================== */
-fetch("./data/cctv_index.json", { cache:"no-store" })
-  .then(r => r.json())
-  .then(data => {
-    DB = data;
-    renderRegions();
-    renderList();
-  })
-  .catch(() => {
-    $regions.innerHTML = "";
-    $list.innerHTML = `<div class="empty">데이터 로드 실패</div>`;
   });
+
+  // =========================
+  // 6) 데이터 로드
+  // =========================
+  const dataUrl = new URL("data/cctv_index.json", window.location.href).toString();
+
+  fetch(dataUrl, { cache: "no-store" })
+    .then(res => {
+      if (!res.ok) throw new Error("HTTP " + res.status + " @ " + dataUrl);
+      return res.json();
+    })
+    .then(data => {
+      DB = data || {};
+      syncBroadButtons();
+      renderLeft();
+      renderList();
+    })
+    .catch(err => {
+      console.error(err);
+      $regions.innerHTML = "";
+      $list.innerHTML = `<div class="empty">데이터 로드 실패</div>`;
+      $count.textContent = "에러: 콘솔(F12) 확인";
+    });
 </script>
 </body>
 </html>
