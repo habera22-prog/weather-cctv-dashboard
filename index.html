@@ -81,6 +81,19 @@ function getQueryParam(name) {
   const $count = document.getElementById("count");
   const $listTitle = document.getElementById("listTitle");
 
+  const $broadBar = document.getElementById("broadBar");
+let currentBroad = ""; // "" = 전체
+
+if ($broadBar) {
+  $broadBar.querySelectorAll("button[data-broad]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      currentBroad = btn.getAttribute("data-broad") || "";
+      renderList();
+    });
+  });
+}
+
+
   let DB = {};                // 원본 JSON
   let currentRegion = null;   // null이면 전체보기
 
@@ -127,6 +140,11 @@ function getQueryParam(name) {
     const all = flatten(DB);
 
     let rows = all;
+    // ✅ (NEW) 12권역 필터(임시: region 문자열 포함 기준)
+if (currentBroad) {
+  rows = rows.filter(x => (x.region || "").includes(currentBroad));
+}
+
     if (currentRegion) rows = rows.filter(x => x.region === currentRegion);
 
     if (query) {
