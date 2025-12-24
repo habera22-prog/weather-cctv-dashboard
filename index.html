@@ -57,6 +57,22 @@ function getQueryParam(name) {
   <button class="btn" data-broad="영남">영남</button>
   <button class="btn" data-broad="제주">제주</button>
 </div>
+  
+// ✅ 메일/운영에서 쓰는 12개 대표 권역(기본 노출)
+const DEFAULT_REGIONS = [
+  "서울 종로구",
+  "수원시 팔달구",
+  "인천 중구",
+  "원주시",
+  "강릉시",
+  "천안시 서북구",
+  "청주시 흥덕구",
+  "전주시 완산구",
+  "광주 서구",
+  "대구 중구",
+  "부산진구",
+  "제주시"
+];
 
 
   <div class="wrap">
@@ -108,32 +124,38 @@ if ($broadBar) {
   }
 
   function renderRegions(){
-    const regions = Object.keys(DB).sort();
-    const total = flatten(DB).length;
+  const allRegions = Object.keys(DB || {});
+  const total = flatten(DB).length;
 
-    $regions.innerHTML = [
-      `<button data-region="" class="${currentRegion===null?'active':''}">전체 보기 <span class="count">(${total})</span></button>`,
-      ...regions.map(r => {
-        const n = (DB[r] || []).length;
-        const active = (currentRegion===r) ? "active" : "";
-        return `<button data-region="${r}" class="${active}">${r} <span class="count">(${n})</span></button>`;
-      })
-    ].join("");
+  // ✅ DEFAULT 12개 중 "DB에 실제 존재하는 것만" 추림
+  const regions = DEFAULT_REGIONS.filter(r => allRegions.includes(r));
 
-    $regions.querySelectorAll("button").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const r = btn.getAttribute("data-region");
-        currentRegion = (r === "") ? null : r;
-        // URL도 같이 바꾸고 싶으면 아래 주석 해제:
-        // const u = new URL(location.href);
-        // if (currentRegion) u.searchParams.set("region", currentRegion); else u.searchParams.delete("region");
-        // history.replaceState(null, "", u.toString());
+  // 혹시 DB에 12개가 하나도 없으면(초기 샘플 등) 전체를 보여주도록 안전장치
+  const listToShow = regions.length ? regions : allRegions.sort();
 
-        renderRegions();
-        renderList();
-      });
+  $regions.innerHTML = [
+    `<button data-region="" class="${currentRegion===null?'active':''}">전체 보기 <span class="count">(${total})</span></button>`,
+    ...listToShow.map(r => {
+      const n = (DB[r] || []).length;
+      const active = (currentRegion===r) ? "active" : "";
+      return `<button data-region="${r}" class="${active}">${r} <span class="count">(${n})</span></button>`;
+    }),
+    // ✅ 주석/안내 문구(조그맣게)
+    `<div style="padding:8px 12px; font-size:11px; color:#777;">
+      ※ 좌측 목록은 <b>메일 대표 12개 권역</b> 기준(기본 노출)입니다.
+     </div>`
+  ].join("");
+
+  $regions.querySelectorAll("button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const r = btn.getAttribute("data-region");
+      currentRegion = (r === "") ? null : r;
+      renderRegions();
+      renderList();
     });
-  }
+  });
+}
+
 
   function renderList(){
     const query = normalize($q.value);
