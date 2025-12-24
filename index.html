@@ -1,3 +1,9 @@
+<script>
+function getQueryParam(name) {
+  const params = new URLSearchParams(window.location.search);
+  return params.get(name);
+}
+</script>
 <!doctype html>
 <html lang="ko">
 <head>
@@ -56,6 +62,7 @@
 <script>
   const params = new URLSearchParams(location.search);
   const initialRegion = params.get("region"); // 선택적으로 유지
+  const initialRegion
 
   const $regions = document.getElementById("regions");
   const $list = document.getElementById("list");
