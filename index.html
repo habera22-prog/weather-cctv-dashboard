@@ -123,38 +123,7 @@ if ($broadBar) {
     return out;
   }
 
-  function renderRegions(){
-  const allRegions = Object.keys(DB || {});
-  const total = flatten(DB).length;
-
-  // ✅ DEFAULT 12개 중 "DB에 실제 존재하는 것만" 추림
-  const regions = DEFAULT_REGIONS.filter(r => allRegions.includes(r));
-
-  // 혹시 DB에 12개가 하나도 없으면(초기 샘플 등) 전체를 보여주도록 안전장치
-  const listToShow = regions.length ? regions : allRegions.sort();
-
-  $regions.innerHTML = [
-    `<button data-region="" class="${currentRegion===null?'active':''}">전체 보기 <span class="count">(${total})</span></button>`,
-    ...listToShow.map(r => {
-      const n = (DB[r] || []).length;
-      const active = (currentRegion===r) ? "active" : "";
-      return `<button data-region="${r}" class="${active}">${r} <span class="count">(${n})</span></button>`;
-    }),
-    // ✅ 주석/안내 문구(조그맣게)
-    `<div style="padding:8px 12px; font-size:11px; color:#777;">
-      ※ 좌측 목록은 <b>메일 대표 12개 권역</b> 기준(기본 노출)입니다.
-     </div>`
-  ].join("");
-
-  $regions.querySelectorAll("button").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const r = btn.getAttribute("data-region");
-      currentRegion = (r === "") ? null : r;
-      renderRegions();
-      renderList();
-    });
-  });
-}
+  renderRegions()
 
 
   function renderList(){
