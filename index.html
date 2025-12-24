@@ -15,8 +15,8 @@
     .panel h3 { margin:0; padding:10px 12px; background:#fafafa; border-bottom:1px solid #eee; font-size:14px; }
     .regions { max-height: 70vh; overflow:auto; }
     .regions button {
-      width:100%; text-align:left; padding:10px 12px; border:0; background:#fff; border-bottom:1px solid #f3f3f3;
-      cursor:pointer;
+      width:100%; text-align:left; padding:10px 12px; border:0; background:#fff;
+      border-bottom:1px solid #f3f3f3; cursor:pointer;
     }
     .regions button.active { background:#f0f7ff; font-weight:700; }
     .list { padding: 6px 0; }
@@ -26,21 +26,24 @@
     }
     .item small { color:#666; }
     .btn {
-      padding: 8px 10px; cursor:pointer; border:1px solid #ddd; background:#fff; border-radius:8px;
+      padding: 8px 10px; cursor:pointer; border:1px solid #ddd;
+      background:#fff; border-radius:8px;
     }
     .btn:hover { background:#fafafa; }
     .empty { color:#666; padding: 14px 12px; }
     .count { color:#666; font-size:12px; }
   </style>
 </head>
-<body>
-  <h2 id="title">CCTV 대시보드</h2>
 
-  <div class="topbar">
-    <input id="q" type="search" placeholder="검색: 지역/이름/제공자" />
-    <span class="count" id="count"></span>
-  </div>
-  
+<body>
+<h2>CCTV 대시보드</h2>
+
+<div class="topbar">
+  <input id="q" type="search" placeholder="검색: 지역/이름/제공자" />
+  <span class="count" id="count"></span>
+</div>
+
+<!-- ✅ 메일 기준 12개 권역 -->
 <div id="broadBar" style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap;">
   <button class="btn" data-broad="">전체</button>
   <button class="btn" data-broad="수도권(서울)">수도권(서울)</button>
@@ -57,141 +60,133 @@
   <button class="btn" data-broad="제주">제주</button>
 </div>
 
-
-  <div class="wrap">
-    <div class="panel">
-      <h3>지역</h3>
-      <div class="regions" id="regions">불러오는 중…</div>
-    </div>
-
-    <div class="panel">
-      <h3 id="listTitle">목록</h3>
-      <div class="list" id="list">불러오는 중…</div>
-    </div>
+<div class="wrap">
+  <div class="panel">
+    <h3>지역</h3>
+    <div class="regions" id="regions">불러오는 중…</div>
   </div>
 
+  <div class="panel">
+    <h3 id="listTitle">목록</h3>
+    <div class="list" id="list">불러오는 중…</div>
+  </div>
+</div>
+
 <script>
-  const params = new URLSearchParams(location.search);
-  const initialRegion = params.get("region"); // 선택적으로 유지
+/* ===================== 기본 변수 ===================== */
+const $regions = document.getElementById("regions");
+const $list = document.getElementById("list");
+const $q = document.getElementById("q");
+const $count = document.getElementById("count");
+const $listTitle = document.getElementById("listTitle");
+const $broadBar = document.getElementById("broadBar");
 
-  // ✅ 메일에서 쓰는 12개 권역(기본 노출)
-const DEFAULT_BROADS = [
-  "수도권(서울)",
-  "수도권(경기)",
-  "수도권(인천)",
-  "강원(영서)",
-  "강원(영동)",
-  "충청(충남)",
-  "충청(충북)",
-  "호남(전북)",
-  "호남(전남)",
-  "영남(경북)",
-  "영남(경남)",
-  "제주"
-];
+let DB = {};
+let currentRegion = null;
+let currentBroad = "";
 
+/* ===================== 유틸 ===================== */
+function normalize(s){ return String(s || "").toLowerCase(); }
 
-  const $regions = document.getElementById("regions");
-  const $list = document.getElementById("list");
-  const $q = document.getElementById("q");
-  const $count = document.getElementById("count");
-  const $listTitle = document.getElementById("listTitle");
+function flatten(db){
+  const out = [];
+  Object.keys(db || {}).forEach(region => {
+    (db[region] || []).forEach(row => out.push({ region, ...row }));
+  });
+  return out;
+}
 
-  const $broadBar = document.getElementById("broadBar");
-let currentBroad = ""; // "" = 전체
+/* ===================== 좌측 지역 ===================== */
+function renderRegions(){
+  const regions = Object.keys(DB).sort();
+  const total = flatten(DB).length;
 
-if ($broadBar) {
-  $broadBar.querySelectorAll("button[data-broad]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      currentBroad = btn.getAttribute("data-broad") || "";
+  $regions.innerHTML = [
+    `<button data-region="" class="${currentRegion===null?'active':''}">
+      전체 보기 <span class="count">(${total})</span>
+     </button>`,
+    ...regions.map(r => `
+      <button data-region="${r}" class="${currentRegion===r?'active':''}">
+        ${r} <span class="count">(${DB[r].length})</span>
+      </button>
+    `),
+    `<div style="padding:8px 12px; font-size:11px; color:#777;">
+      ※ 좌측은 <b>전체 CCTV 기준</b> (178개 이상 자동 확장)
+     </div>`
+  ].join("");
+
+  $regions.querySelectorAll("button[data-region]").forEach(btn => {
+    btn.onclick = () => {
+      const r = btn.getAttribute("data-region");
+      currentRegion = r || null;
+      renderRegions();
       renderList();
-    });
+    };
   });
 }
 
+/* ===================== 우측 리스트 ===================== */
+function renderList(){
+  const query = normalize($q.value);
+  let rows = flatten(DB);
 
-  let DB = {};                // 원본 JSON
-  let currentRegion = null;   // null이면 전체보기
-
-  function normalize(s){ return String(s || "").toLowerCase(); }
-
-  function flatten(db){
-    const out = [];
-    Object.keys(db || {}).forEach(region => {
-      (db[region] || []).forEach(row => out.push({ region, ...row }));
-    });
-    return out;
+  if (currentBroad) {
+    rows = rows.filter(x => (x.region || "").includes(currentBroad));
+  }
+  if (currentRegion) {
+    rows = rows.filter(x => x.region === currentRegion);
+  }
+  if (query) {
+    rows = rows.filter(x =>
+      normalize(x.region).includes(query) ||
+      normalize(x.name).includes(query) ||
+      normalize(x.provider).includes(query)
+    );
   }
 
-  renderRegions()
+  $listTitle.textContent = currentRegion ? `목록 - ${currentRegion}` : "목록 - 전체";
+  $count.textContent = `표시: ${rows.length}개`;
 
+  if (!rows.length){
+    $list.innerHTML = `<div class="empty">조건에 맞는 CCTV가 없습니다.</div>`;
+    return;
+  }
 
-  function renderList(){
-    const query = normalize($q.value);
-    const all = flatten(DB);
-
-    let rows = all;
-    // ✅ (NEW) 12권역 필터(임시: region 문자열 포함 기준)
-if (currentBroad) {
-  rows = rows.filter(x => (x.region || "").includes(currentBroad));
+  $list.innerHTML = rows.map(r => `
+    <div class="item">
+      <div>
+        <b>${r.name}</b><br/>
+        <small>${r.region} · ${r.provider}</small>
+      </div>
+      <button class="btn" onclick="window.open('${r.url}','_blank')">
+        새창 재생
+      </button>
+    </div>
+  `).join("");
 }
 
-    if (currentRegion) rows = rows.filter(x => x.region === currentRegion);
+/* ===================== 이벤트 ===================== */
+$q.oninput = renderList;
 
-    if (query) {
-      rows = rows.filter(x =>
-        normalize(x.region).includes(query) ||
-        normalize(x.name).includes(query) ||
-        normalize(x.provider).includes(query)
-      );
-    }
+$broadBar.querySelectorAll("button[data-broad]").forEach(btn => {
+  btn.onclick = () => {
+    currentBroad = btn.getAttribute("data-broad") || "";
+    renderList();
+  };
+});
 
-    $listTitle.textContent = currentRegion ? `목록 - ${currentRegion}` : "목록 - 전체";
-    $count.textContent = `표시: ${rows.length}개`;
-
-    if (!rows.length){
-      $list.innerHTML = `<div class="empty">조건에 맞는 CCTV가 없습니다.</div>`;
-      return;
-    }
-
-    $list.innerHTML = rows.map(r => `
-      <div class="item">
-        <div>
-          <b>${r.name || "-"}</b><br/>
-          <small>${r.region} · ${r.provider || "-"}</small>
-        </div>
-        <button class="btn" data-url="${(r.url || "").replaceAll('"','&quot;')}">
-          새창 재생
-        </button>
-      </div>
-    `).join("");
-
-    $list.querySelectorAll("button[data-url]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const url = btn.getAttribute("data-url");
-        if (!url) return;
-        window.open(url, "_blank", "noopener,noreferrer");
-      });
-    });
-  }
-
-  $q.addEventListener("input", renderList);
-
-  fetch("./data/cctv_index.json", { cache: "no-store" })
-    .then(res => {
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      return res.json();
-    })
-    .then(data => {
-      DB = data || {};
-      currentRegion = initialRegion || null;
-      renderRegions();
-      renderList();
-    })
-    .catch(() => {
-      $regions.innerHTML = "";
-      $list.innerHTML = `<div class="empty">데이터 로드 실패</div>`;
-    });
+/* ===================== 데이터 로드 ===================== */
+fetch("./data/cctv_index.json", { cache:"no-store" })
+  .then(r => r.json())
+  .then(data => {
+    DB = data;
+    renderRegions();
+    renderList();
+  })
+  .catch(() => {
+    $regions.innerHTML = "";
+    $list.innerHTML = `<div class="empty">데이터 로드 실패</div>`;
+  });
 </script>
 </body>
 </html>
