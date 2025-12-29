@@ -6,6 +6,29 @@
       "provider": "UTIC",
       "url": "https://www.utic.go.kr/jsp/map/cctvStream.jsp?cctvid=L010159&cctvname=%25EC%25A2%2585%25EB%25A1%259C3%25EA%25B0%2580&kind=Seoul&cctvip=undefined&cctvch=52&id=152&cctvpasswd=undefined&cctvport=undefined&minX=126.96518786366364&minY=37.55615510193637&maxX=127.01016215604955&maxY=37.58147567809622"
     }
+  ],
+  "서울 시청": [
+    {
+      "region": "서울 시청",
+      "name": "시청",
+      "provider": "UTIC",
+      "url": "https://www.utic.go.kr/jsp/map/cctvStream.jsp?cctvid=L010169&cctvname=%25EC%258B%259C%25EC%25B2%25AD&kind=Seoul&cctvip=undefined&cctvch=51&id=60&cctvpasswd=undefined&cctvport=undefined&minX=126.95616263515278&minY=37.55416127499828&maxX=127.00113414615589&maxY=37.579484529643075"
+    }
+  ],
+  "수도권(경기)": [
+    {
+      "region": "수도권(경기)",
+      "name": "한국농업대학 앞(화성)",
+      "provider": "UTIC",
+      "url": "https://www.utic.go.kr/jsp/map/cctvStream.jsp?cctvid=L902683&cctvname=%25ED%2595%259C%25EA%25B5%25AD%25EB%2586%258D%25EC%2597%2585%25EB%258C%2580%25ED%2595%2599%2520%25EC%2595%259E(%25ED%2599%2594%25EC%2584%25B1)&kind=EE&cctvip=1244&cctvch=undefined&id=undefined&cctvpasswd=undefined&cctvport=undefined&minX=126.82776050762965&minY=37.216400279858455&maxX=127.11646713090593&maxY=37.349007182559575"
+    }
+  ],
+  "인천 시청": [
+    {
+      "region": "인천 시청",
+      "name": "석천사거리",
+      "provider": "UTIC",
+      "url": "https://www.utic.go.kr/jsp/map/cctvStream.jsp?cctvid=L020088&cctvname=%25EC%2584%259D%25EC%25B2%259C%25EC%2582%25AC%25EA%25B1%25B0%25EB%25A6%25AC&kind=N&cctvip=0&cctvch=undefined&id=L302&cctvpasswd=undefined&cctvport=undefined&minX=126.6828224309558&minY=37.44329210033124&maxX=126.72768606497903&maxY=37.468696216720105"
+    }
   ]
-}
 
