@@ -11,7 +11,7 @@
     input[type="search"] { padding: 8px 10px; min-width: 260px; }
     .wrap { display: grid; grid-template-columns: 260px 1fr; gap: 14px; }
     @media (max-width: 860px){ .wrap { grid-template-columns: 1fr; } }
-    .panel { border:1px solid #eee; border-radius:10px; overflow:hidden; }
+    .panel { border:1px solid #eee; border-radius:10px; overflow:hidden; background:#fff; }
     .panel h3 { margin:0; padding:10px 12px; background:#fafafa; border-bottom:1px solid #eee; font-size:14px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
     .regions { max-height: 70vh; overflow:auto; }
     .regions button {
@@ -29,10 +29,46 @@
       padding: 8px 10px; cursor:pointer; border:1px solid #ddd; background:#fff; border-radius:8px;
     }
     .btn:hover { background:#fafafa; }
+    .btn.primary { border-color:#cfe3ff; background:#f0f7ff; }
+    .btn.primary:hover { background:#e8f2ff; }
+
     .empty { color:#666; padding: 14px 12px; }
     .count { color:#666; font-size:12px; }
     .hint { padding:8px 12px; font-size:11px; color:#777; border-top:1px solid #f3f3f3; background:#fff; }
     .bar { margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap; }
+
+    /* ✅ 데스크탑: 좌측 접기/펼치기 */
+    .wrap.left-collapsed { grid-template-columns: 1fr; }
+    .wrap.left-collapsed .leftPanel { display:none; }
+
+    /* ✅ 모바일: 좌측 패널을 드로어처럼 */
+    .mobile-dim { display:none; }
+
+    @media (max-width: 860px){
+      .wrap { grid-template-columns: 1fr; }
+      .leftPanel { display:none; }
+
+      .wrap.left-open .leftPanel{
+        display:block;
+        position: fixed;
+        top: 64px;
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        background:#fff;
+        z-index: 9999;
+        box-shadow: 0 10px 30px rgba(0,0,0,.12);
+      }
+      .wrap.left-open .rightPanel{ opacity:.25; pointer-events:none; }
+
+      .wrap.left-open ~ .mobile-dim{
+        display:block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.25);
+        z-index: 9998;
+      }
+    }
   </style>
 </head>
 
@@ -41,6 +77,7 @@
 
   <div class="topbar">
     <input id="q" type="search" placeholder="검색: 지역/이름/제공자" />
+    <button id="openLeft" class="btn primary" type="button">☰ 목록</button>
     <span class="count" id="count"></span>
   </div>
 
@@ -61,8 +98,8 @@
     <button class="btn" data-broad="제주">제주</button>
   </div>
 
-  <div class="wrap">
-    <div class="panel">
+  <div class="wrap" id="wrap">
+    <div class="panel leftPanel">
       <h3>
         <span id="leftTitle">권역(메일 12)</span>
         <button id="toggleLeft" class="btn" type="button">전체 지역 보기</button>
@@ -71,29 +108,30 @@
       <div class="hint" id="leftHint">※ 기본 노출: 메일에서 사용하는 12권역 기준</div>
     </div>
 
-    <div class="panel">
+    <div class="panel rightPanel">
       <h3 id="listTitle">목록</h3>
       <div class="list" id="list">불러오는 중…</div>
     </div>
   </div>
 
-<script>
+  <div class="mobile-dim" id="mobileDim"></div>
 
+<script>
   const BROAD_MAP = {
-  "수도권(서울)": ["서울"],
-  "수도권(경기)": ["경기", "수원", "용인", "성남"],
-  "수도권(인천)": ["인천"],
-  "강원(영서)": ["원주", "춘천"],
-  "강원(영동)": ["강릉", "속초"],
-  "충청(충남)": ["천안", "아산"],
-  "충청(충북)": ["청주"],
-  "호남(전북)": ["전주"],
-  "호남(전남)": ["광주"],
-  "영남(경북)": ["대구", "포항"],
-  "영남(경남)": ["부산", "창원"],
-  "제주": ["제주"]
-};
-  
+    "수도권(서울)": ["서울"],
+    "수도권(경기)": ["경기", "수원", "용인", "성남"],
+    "수도권(인천)": ["인천"],
+    "강원(영서)": ["원주", "춘천"],
+    "강원(영동)": ["강릉", "속초"],
+    "충청(충남)": ["천안", "아산"],
+    "충청(충북)": ["청주"],
+    "호남(전북)": ["전주"],
+    "호남(전남)": ["광주"],
+    "영남(경북)": ["대구", "포항"],
+    "영남(경남)": ["부산", "창원"],
+    "제주": ["제주"]
+  };
+
   // =========================
   // 1) 기본 설정
   // =========================
@@ -118,11 +156,9 @@
 
   function normalize(s){ return String(s || "").toLowerCase(); }
   function prefixOfRegion(region){
-    // "서울 종로구" => "서울", "수원시 팔달구" => "수원시"
     return String(region || "").trim().split(/\s+/)[0] || "";
   }
 
-  // region(예: "서울 종로구") -> broad(예: "수도권(서울)")
   function regionToBroad(region){
     const r = String(region || "");
     const p = prefixOfRegion(r);
@@ -131,34 +167,28 @@
     if (p === "인천") return "수도권(인천)";
     if (p === "제주" || r.includes("제주")) return "제주";
 
-    // 경기
     for (const c of GYEONGGI_CITIES) if (r.startsWith(c)) return "수도권(경기)";
     if (r.includes("경기")) return "수도권(경기)";
 
-    // 강원
     for (const c of GW_YEONGDONG) if (r.startsWith(c)) return "강원(영동)";
     for (const c of GW_YEONGSEO) if (r.startsWith(c)) return "강원(영서)";
     if (r.includes("강원")) return "강원(영서)";
 
-    // 충청
     for (const c of CN_CITIES) if (r.startsWith(c)) return "충청(충남)";
     for (const c of CB_CITIES) if (r.startsWith(c)) return "충청(충북)";
     if (r.includes("충남")) return "충청(충남)";
     if (r.includes("충북")) return "충청(충북)";
 
-    // 호남
     for (const c of JB_CITIES) if (r.startsWith(c)) return "호남(전북)";
     for (const c of JN_CITIES) if (r.startsWith(c)) return "호남(전남)";
     if (r.includes("전북")) return "호남(전북)";
     if (r.includes("전남")) return "호남(전남)";
 
-    // 영남
     for (const c of GB_CITIES) if (r.startsWith(c)) return "영남(경북)";
     for (const c of GN_CITIES) if (r.startsWith(c)) return "영남(경남)";
     if (r.includes("경북")) return "영남(경북)";
     if (r.includes("경남")) return "영남(경남)";
 
-    // 못 맞추면 기타로(일단 전체에서만 보이게)
     return "기타";
   }
 
@@ -168,8 +198,8 @@
       (db[region] || []).forEach(row => {
         out.push({
           ...row,
-          regionKey: region,              // DB key
-          region: row.region || region,   // 표시용
+          regionKey: region,
+          region: row.region || region,
           broad: regionToBroad(region)
         });
       });
@@ -180,6 +210,7 @@
   // =========================
   // 2) DOM
   // =========================
+  const $wrap      = document.getElementById("wrap");
   const $regions   = document.getElementById("regions");
   const $list      = document.getElementById("list");
   const $q         = document.getElementById("q");
@@ -189,6 +220,8 @@
   const $toggleLeft= document.getElementById("toggleLeft");
   const $leftTitle = document.getElementById("leftTitle");
   const $leftHint  = document.getElementById("leftHint");
+  const $openLeft  = document.getElementById("openLeft");
+  const $mobileDim = document.getElementById("mobileDim");
 
   // =========================
   // 3) 상태
@@ -197,6 +230,44 @@
   let currentBroad = "";     // "" = 전체
   let leftMode = "broad";    // "broad"(12권역) or "all"(전체 지역)
   let currentRegionKey = ""; // leftMode="all"일 때만 사용
+
+  // =========================
+  // ✅ 좌측 패널 UX(데스크탑: 접기 / 모바일: 드로어)
+  // =========================
+  function isMobile(){
+    return window.matchMedia("(max-width: 860px)").matches;
+  }
+
+  function applyInitialLeftState(){
+    if (isMobile()){
+      $wrap.classList.remove("left-open");
+      $wrap.classList.remove("left-collapsed"); // 모바일은 그리드 1열
+    } else {
+      $wrap.classList.remove("left-open");
+      $wrap.classList.add("left-collapsed");    // 데스크탑은 기본 접힘
+    }
+  }
+
+  function closeLeftIfMobile(){
+    if (isMobile()) $wrap.classList.remove("left-open");
+  }
+
+  applyInitialLeftState();
+  window.addEventListener("resize", applyInitialLeftState);
+
+  $openLeft.addEventListener("click", () => {
+    if (isMobile()){
+      $wrap.classList.toggle("left-open");
+    } else {
+      $wrap.classList.toggle("left-collapsed");
+    }
+  });
+
+  if ($mobileDim){
+    $mobileDim.addEventListener("click", () => {
+      $wrap.classList.remove("left-open");
+    });
+  }
 
   // =========================
   // 4) 렌더링
@@ -210,7 +281,6 @@
       $leftHint.textContent = "※ 기본 노출: 메일에서 사용하는 12권역 기준";
       $toggleLeft.textContent = "전체 지역 보기";
 
-      // broad별 count
       const counts = {};
       for (const b of DEFAULT_BROADS) counts[b] = 0;
       rows.forEach(r => { if (counts[r.broad] != null) counts[r.broad]++; });
@@ -226,18 +296,18 @@
 
       $regions.querySelectorAll("button[data-broad]").forEach(btn => {
         btn.addEventListener("click", () => {
-          currentRegionKey = ""; // broad모드에서는 지역키 해제
+          currentRegionKey = "";
           currentBroad = btn.getAttribute("data-broad") || "";
           syncBroadButtons();
           renderList();
-          renderLeft(); // active 표시 갱신
+          renderLeft();
+          closeLeftIfMobile();
         });
       });
 
     } else {
-      // 전체 지역(178+) 보기
       $leftTitle.textContent = "지역(전체)";
-      $leftHint.textContent = "※ DB에 등록된 전체 지역 목록(178+ 확장 가능)";
+      $leftHint.textContent = "※ DB에 등록된 전체 지역 목록(200+ 확장 가능)";
       $toggleLeft.textContent = "메일 12권역 보기";
 
       const regionKeys = Object.keys(DB || {}).sort();
@@ -252,11 +322,12 @@
 
       $regions.querySelectorAll("button[data-region]").forEach(btn => {
         btn.addEventListener("click", () => {
-          currentBroad = ""; // 전체 지역 모드에서는 broad 해제
+          currentBroad = "";
           syncBroadButtons();
           currentRegionKey = btn.getAttribute("data-region") || "";
           renderList();
           renderLeft();
+          closeLeftIfMobile();
         });
       });
     }
@@ -277,15 +348,13 @@
 
     let rows = all;
 
-    // leftMode에 따라 필터가 달라짐
     if (leftMode === "broad") {
-    if (currentBroad && BROAD_MAP[currentBroad]) {
-  const keys = BROAD_MAP[currentBroad];
-  rows = rows.filter(x =>
-    keys.some(k => (x.region || "").includes(k))
-  );
-}
-
+      if (currentBroad && BROAD_MAP[currentBroad]) {
+        const keys = BROAD_MAP[currentBroad];
+        rows = rows.filter(x =>
+          keys.some(k => (x.region || "").includes(k))
+        );
+      }
     } else {
       if (currentRegionKey) rows = rows.filter(x => x.regionKey === currentRegionKey);
     }
@@ -339,7 +408,7 @@
   if ($broadBar) {
     $broadBar.querySelectorAll("button[data-broad]").forEach(btn => {
       btn.addEventListener("click", () => {
-        leftMode = "broad";      // 상단 누르면 broad 모드로
+        leftMode = "broad";
         currentRegionKey = "";
         currentBroad = btn.getAttribute("data-broad") || "";
         syncBroadButtons();
