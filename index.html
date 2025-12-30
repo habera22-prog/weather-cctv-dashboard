@@ -3,189 +3,413 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>CCTV 전국 현황(12권역)</title>
+  <title>CCTV 12권역 모니터링</title>
+
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
-    h1 { font-size: 20px; margin: 0 0 8px; }
-    .sub { color:#666; margin: 0 0 18px; font-size: 13px; }
-
-    .layout { display: grid; grid-template-columns: 360px 1fr; gap: 14px; }
-    @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } }
-
-    .grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
-    button.btn {
-      width: 100%;
-      text-align: left;
-      padding: 12px 14px;
-      border-radius: 12px;
-      border: 1px solid #ddd;
-      background: #fff;
-      cursor: pointer;
+    :root{
+      --bg:#0b0b0c;
+      --panel:rgba(255,255,255,.06);
+      --border:rgba(255,255,255,.10);
+      --border2:rgba(255,255,255,.16);
+      --text:#fff;
+      --muted:rgba(255,255,255,.65);
+      --headerH:72px;
+      --gap:10px;
+      --radius:14px;
     }
-    button.btn:hover { border-color:#bbb; }
-    button.btn.active { border-color:#111; box-shadow: 0 0 0 2px rgba(0,0,0,0.06); }
 
-    .note { font-size:12px; color:#666; margin-top:6px; }
-
-    .panel {
-      border: 1px solid #ddd;
-      border-radius: 14px;
-      overflow: hidden;
-      background: #fff;
-      min-height: 520px;
-      display: flex;
-      flex-direction: column;
+    html, body { height:100%; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      overflow:hidden; /* ✅ 페이지 자체 스크롤 방지(관제센터 느낌) */
     }
-    .panelHead {
-      padding: 12px 14px;
-      border-bottom: 1px solid #eee;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap: 10px;
-    }
-    .titleBox { display:flex; flex-direction:column; gap: 4px; }
-    .panelTitle { font-weight: 700; }
-    .panelMeta { font-size: 12px; color:#666; }
 
-    .actions { display:flex; gap: 8px; align-items:center; }
-    a.linkBtn {
-      display:inline-block;
-      padding: 8px 10px;
-      border: 1px solid #ddd;
-      border-radius: 10px;
+    header{
+      position: sticky; top:0; z-index:100;
+      height: var(--headerH);
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px; flex-wrap:wrap;
+
+      padding:12px 14px;
+      background: rgba(11,11,12,.85);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      box-sizing: border-box;
+    }
+    .title{ font-weight:800; font-size:14px; letter-spacing:.2px; }
+    .sub{ font-size:12px; color:var(--muted); }
+
+    .controls{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .btn{
+      font-size:12px;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid var(--border2);
+      background: rgba(255,255,255,.06);
+      color:var(--text);
+      cursor:pointer;
       text-decoration:none;
-      color:#111;
-      font-size: 12px;
-      background:#fff;
       white-space:nowrap;
     }
+    .btn:hover{ border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.10); }
 
-    .viewer {
-      flex: 1;
-      background: #fafafa;
-      position: relative;
+    /* ✅ 관제센터 그리드(헤더 제외한 영역을 전부 사용) */
+    .grid{
+      height: calc(100vh - var(--headerH));
+      padding: var(--gap);
+      box-sizing:border-box;
+
+      display:grid;
+      grid-template-columns: repeat(4, minmax(260px, 1fr));
+      gap: var(--gap);
+
+      overflow:auto; /* ✅ 그리드 내부만 스크롤 */
     }
-    iframe {
-      width: 100%;
-      height: 100%;
-      border: 0;
-      background: #fff;
+    @media (max-width: 1200px){ .grid{ grid-template-columns: repeat(3, minmax(240px, 1fr)); } }
+    @media (max-width: 900px) { .grid{ grid-template-columns: repeat(2, minmax(240px, 1fr)); } }
+    @media (max-width: 520px) { .grid{ grid-template-columns: 1fr; } }
+
+    .card{
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow:hidden;
+      box-shadow: 0 8px 30px rgba(0,0,0,.25);
+
+      display:flex;
+      flex-direction:column;
+
+      /* ✅ “위에만 보여” 방지: 카드가 반드시 높이를 갖도록 */
+      min-height: 240px;
     }
 
-    .empty {
-      padding: 24px;
-      color:#666;
-      font-size: 13px;
-      line-height: 1.6;
+    .cardHead{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px;
+      padding:10px 10px 8px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      box-sizing:border-box;
     }
-    .hint { margin-top: 10px; font-size: 12px; color:#888; }
-    .warn { margin-top: 8px; font-size: 12px; color:#b26a00; }
+    .meta{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+    .region{ font-weight:800; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .note{ font-size:11px; color:var(--muted); line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+    .headBtns{ display:flex; gap:6px; }
+    .pill{
+      font-size:11px;
+      padding:6px 8px;
+      border-radius:999px;
+      border:1px solid var(--border2);
+      background: rgba(255,255,255,.06);
+      color:var(--text);
+      text-decoration:none;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+    .pill:hover{ border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.10); }
+
+    .frameWrap{
+      position:relative;
+      flex:1;
+      background:#111;
+      min-height: 180px; /* ✅ iframe 영역 확보 */
+    }
+    iframe{
+      width:100%;
+      height:100%;
+      border:0;
+      background:#111;
+    }
+
+    .overlay{
+      position:absolute; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      padding:14px;
+      text-align:center;
+      color: rgba(255,255,255,.78);
+      font-size:12px;
+      background: linear-gradient(0deg, rgba(0,0,0,.62), rgba(0,0,0,.38));
+      opacity:0;
+      pointer-events:none;
+      transition: opacity .15s ease;
+    }
+    .overlay.show{ opacity:1; pointer-events:auto; }
+    .overlay .box{
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.06);
+      border-radius:12px;
+      padding:10px 12px;
+      max-width:340px;
+    }
+    .overlay .box b{ color:#fff; }
+    .overlay .actions{ margin-top:8px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+
+    .toast{
+      position:fixed; left:50%; bottom:14px; transform:translateX(-50%);
+      background: rgba(0,0,0,.7);
+      border: 1px solid rgba(255,255,255,.14);
+      color:#fff;
+      padding:10px 12px;
+      border-radius:12px;
+      font-size:12px;
+      opacity:0;
+      transition: opacity .2s ease;
+      pointer-events:none;
+      z-index:200;
+      max-width: 92vw;
+      white-space: pre-line;
+    }
+    .toast.show{ opacity:1; }
   </style>
 </head>
+
 <body>
-  <h1>권역별 CCTV 바로보기</h1>
-  <p class="sub">버튼을 누르면 이 페이지 안에서 CCTV 화면을 표시합니다.</p>
-
-  <div class="layout">
+  <header>
     <div>
-      <div id="grid" class="grid"></div>
+      <div class="title">CCTV 모니터링 (구글시트 CSV 연동)</div>
+      <div class="sub" id="statusText">데이터 로딩 중…</div>
     </div>
 
-    <div class="panel">
-      <div class="panelHead">
-        <div class="titleBox">
-          <div id="panelTitle" class="panelTitle">선택된 CCTV 없음</div>
-          <div id="panelMeta" class="panelMeta">왼쪽에서 권역을 선택하세요.</div>
-        </div>
-        <div class="actions">
-          <a id="openNew" class="linkBtn" href="#" target="_blank" rel="noopener noreferrer" style="display:none;">새창으로 열기</a>
-          <a id="openDirect" class="linkBtn" href="#" target="_self" rel="noopener noreferrer" style="display:none;">바로가기</a>
-        </div>
-      </div>
-      <div class="viewer">
-        <div id="empty" class="empty">
-          좌측 버튼을 누르면 여기에서 CCTV 페이지가 표시됩니다.<br/>
-          <div class="warn">※ 일부 CCTV 사이트는 보안정책(X-Frame-Options/CSP) 때문에 페이지 내 표시가 막힐 수 있습니다.</div>
-          <div class="hint">그 경우, 우측 상단의 “새창으로 열기”를 사용하세요.</div>
-        </div>
-        <iframe id="frame" src="about:blank" style="display:none;"></iframe>
-      </div>
+    <div class="controls">
+      <button class="btn" id="reloadAll">전체 리로드</button>
+      <button class="btn" id="toggleAuto">자동 새로고침: OFF</button>
+      <span class="sub" id="autoInfo">권장: 5~10분</span>
     </div>
-  </div>
+  </header>
+
+  <div class="grid" id="grid"></div>
+  <div class="toast" id="toast"></div>
 
   <script>
-    // ✅ 여기에 네 리스트를 그대로 넣으면 됨
-    // Apps Script로 만들면 JSON.stringify(list, null, 2) 결과를 붙여넣으면 끝
-    const CCTV_LIST = [
-      // 예시:
-      // { region: "수도권(서울) 시청", url: "https://www.utic.go.kr/view/map?cctvid=..." , note:"시청 중심" },
-      // { region: "수도권(서울) 이면", url: "https://www.utic.go.kr/view/map?cctvid=..." , note:"이면도로" }
-    ];
+    // ✅ 네가 준 “대표CCTV 웹 게시 CSV” URL
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZZaK8GDz_FZsefh-XoCkPmQhKOugjSRNioC5M8fAUH87iiyQV8KK28wCVN4_dbWJukM-Rbwkkbz_G/pub?gid=1422576665&single=true&output=csv";
 
     const grid = document.getElementById("grid");
-    const frame = document.getElementById("frame");
-    const empty = document.getElementById("empty");
-    const panelTitle = document.getElementById("panelTitle");
-    const panelMeta = document.getElementById("panelMeta");
-    const openNew = document.getElementById("openNew");
-    const openDirect = document.getElementById("openDirect");
+    const reloadAllBtn = document.getElementById("reloadAll");
+    const toggleAutoBtn = document.getElementById("toggleAuto");
+    const autoInfo = document.getElementById("autoInfo");
+    const statusText = document.getElementById("statusText");
+    const toast = document.getElementById("toast");
 
-    let activeBtn = null;
+    let autoOn = false;
+    let autoTimer = null;
+    const AUTO_MIN = 5; // 기본 5분
 
-    function selectItem(item, btn) {
-      if (activeBtn) activeBtn.classList.remove("active");
-      activeBtn = btn;
-      activeBtn.classList.add("active");
-
-      panelTitle.textContent = item.region || "CCTV";
-      panelMeta.textContent = item.note ? item.note : " ";
-
-      // iframe로 페이지 안에 표시
-      empty.style.display = "none";
-      frame.style.display = "block";
-      frame.src = item.url;
-
-      // 보조 링크(필요하면 사용)
-      openNew.style.display = "inline-block";
-      openNew.href = item.url;
-
-      openDirect.style.display = "inline-block";
-      openDirect.href = item.url; // 같은 페이지 이동용(원하면 제거 가능)
-    }
-
-    function render() {
-      if (!CCTV_LIST || CCTV_LIST.length === 0) {
-        grid.innerHTML = '<div style="color:#999;font-size:13px;">CCTV_LIST가 비어있습니다.</div>';
-        return;
-      }
-
-      CCTV_LIST.forEach(item => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "btn";
-        btn.innerHTML = `
-          <div><b>${escapeHtml(item.region || "CCTV")}</b></div>
-          ${item.note ? `<div class="note">${escapeHtml(item.note)}</div>` : ""}
-        `;
-        btn.addEventListener("click", () => selectItem(item, btn));
-        grid.appendChild(btn);
-      });
-
-      // 첫 번째 자동 선택(원하면 주석)
-      selectItem(CCTV_LIST[0], grid.querySelector("button.btn"));
+    function showToast(msg){
+      toast.textContent = msg;
+      toast.classList.add("show");
+      setTimeout(()=>toast.classList.remove("show"), 2200);
     }
 
     function escapeHtml(s){
       return String(s || "")
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
+        .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+    }
+    function escapeAttr(s){
+      return String(s || "")
+        .replace(/&/g,"&amp;").replace(/"/g,"&quot;")
+        .replace(/</g,"&lt;").replace(/>/g,"&gt;");
     }
 
-    render();
+    // ✅ CSV 파서(따옴표/쉼표 포함 케이스 대응)
+    function parseCsv(text){
+      const rows = [];
+      let row = [], cur = "", inQ = false;
+      for (let i=0; i<text.length; i++){
+        const ch = text[i];
+        const next = text[i+1];
+
+        if (ch === '"' ){
+          if (inQ && next === '"'){ cur += '"'; i++; }
+          else inQ = !inQ;
+          continue;
+        }
+
+        if (!inQ && ch === ","){
+          row.push(cur); cur=""; continue;
+        }
+
+        if (!inQ && (ch === "\n" || ch === "\r")){
+          if (ch === "\r" && next === "\n") i++;
+          row.push(cur); cur="";
+          // 빈 줄 스킵
+          if (row.some(c => String(c||"").trim() !== "")) rows.push(row);
+          row = [];
+          continue;
+        }
+
+        cur += ch;
+      }
+      if (cur.length || row.length){
+        row.push(cur);
+        if (row.some(c => String(c||"").trim() !== "")) rows.push(row);
+      }
+      return rows;
+    }
+
+    function normalizeHeaders(h){
+      return String(h||"").trim().toLowerCase()
+        .replace(/\s+/g,"")
+        .replace(/[\u200b-\u200d\uFEFF]/g,""); // zero-width 제거
+    }
+
+    function mapCsvToItems(rows){
+      if (!rows || rows.length < 2) return [];
+
+      const header = rows[0];
+      const idx = {};
+      header.forEach((h, i) => idx[normalizeHeaders(h)] = i);
+
+      // 헤더명이 다를 수도 있으니 유연하게
+      const iRegion = idx["region"] ?? idx["권역"] ?? idx["지역"] ?? 0;
+      const iUrl    = idx["url"] ?? idx["링크"] ?? idx["cctv"] ?? idx["주소"] ?? 1;
+      const iNote   = idx["note"] ?? idx["비고"] ?? idx["설명"] ?? 2;
+
+      return rows.slice(1)
+        .map(r => ({
+          region: String(r[iRegion] ?? "").trim(),
+          url: String(r[iUrl] ?? "").trim(),
+          note: String(r[iNote] ?? "").trim()
+        }))
+        .filter(x => x.region && x.url); // region/url 필수
+    }
+
+    function withCacheBust(url){
+      if (!url) return "";
+      try{
+        const u = new URL(url);
+        u.searchParams.set("_t", Date.now());
+        return u.toString();
+      }catch(e){
+        return url + (url.includes("?") ? "&" : "?") + "_t=" + Date.now();
+      }
+    }
+
+    function buildCard(item, idx){
+      const region = item.region || "-";
+      const note = item.note || "";
+      const url = item.url || "";
+
+      const card = document.createElement("div");
+      card.className = "card";
+
+      card.innerHTML = `
+        <div class="cardHead">
+          <div class="meta">
+            <div class="region">${escapeHtml(region)}</div>
+            <div class="note">${note ? escapeHtml(note) : "&nbsp;"}</div>
+          </div>
+          <div class="headBtns">
+            <a class="pill" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">새창</a>
+            <button class="pill" data-action="reload">리로드</button>
+          </div>
+        </div>
+
+        <div class="frameWrap">
+          <iframe data-idx="${idx}" src="${escapeAttr(withCacheBust(url))}" loading="lazy"></iframe>
+
+          <div class="overlay" id="ov_${idx}">
+            <div class="box">
+              <b>이 화면이 안 보일 수 있어요</b><br/>
+              사이트 보안 정책으로 iframe이 차단된 경우입니다.<br/>
+              <div class="actions">
+                <a class="pill" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">새창으로 보기</a>
+                <button class="pill" data-action="hide">닫기</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // 개별 리로드
+      card.querySelector('[data-action="reload"]')?.addEventListener("click", () => {
+        reloadFrame(card);
+      });
+
+      // 오버레이 닫기
+      card.querySelector('[data-action="hide"]')?.addEventListener("click", () => {
+        const ov = card.querySelector(".overlay");
+        if (ov) ov.classList.remove("show");
+      });
+
+      // ✅ iframe 차단은 JS로 완벽 판별이 어려움
+      // 대신 “10초 후”까지 iframe이 아무것도 못 띄웠을 가능성이 있으면 안내 오버레이를 띄움(사용자 경험용)
+      // 너무 불편하면 10초 -> 0으로 바꾸거나 아래 줄을 주석처리하면 됨.
+      setTimeout(() => {
+        const ov = document.getElementById("ov_" + idx);
+        if (ov) ov.classList.add("show");
+      }, 10000);
+
+      return card;
+    }
+
+    function reloadFrame(card){
+      const iframe = card.querySelector("iframe");
+      if (!iframe) return;
+      iframe.src = withCacheBust(iframe.src);
+    }
+
+    function reloadAll(){
+      document.querySelectorAll(".card").forEach(card => reloadFrame(card));
+      showToast("전체 리로드 완료");
+    }
+
+    async function loadAndRender(){
+      grid.innerHTML = "";
+      statusText.textContent = "CSV 로딩 중…";
+
+      try{
+        const res = await fetch(CSV_URL, { cache: "no-store" });
+        if (!res.ok) throw new Error("CSV HTTP " + res.status);
+        const text = await res.text();
+
+        const rows = parseCsv(text);
+        const items = mapCsvToItems(rows);
+
+        if (!items.length){
+          statusText.textContent = "CSV 데이터가 비어있거나(또는 컬럼명이 다름) 표시할 항목이 없습니다.";
+          return;
+        }
+
+        items.forEach((item, idx) => grid.appendChild(buildCard(item, idx)));
+
+        const now = new Date();
+        statusText.textContent =
+          `표시 ${items.length}개 · 마지막 로드: ${now.toLocaleString("ko-KR")} · (시트 수정 시 새로고침하면 반영)`;
+
+      }catch(e){
+        statusText.textContent = "로딩 실패: " + (e.message || e);
+      }
+    }
+
+    // 버튼 바인딩
+    reloadAllBtn.addEventListener("click", reloadAll);
+
+    toggleAutoBtn.addEventListener("click", () => {
+      autoOn = !autoOn;
+      toggleAutoBtn.textContent = "자동 새로고침: " + (autoOn ? "ON" : "OFF");
+      autoInfo.textContent = autoOn ? (AUTO_MIN + "분마다 전체 리로드") : "권장: 5~10분";
+
+      if (autoTimer) clearInterval(autoTimer);
+      autoTimer = null;
+
+      if (autoOn){
+        autoTimer = setInterval(reloadAll, AUTO_MIN * 60 * 1000);
+        showToast("자동 새로고침 ON");
+      }else{
+        showToast("자동 새로고침 OFF");
+      }
+    });
+
+    // 최초 로드
+    loadAndRender();
+
+    // ✅ 원하면: 1분마다 CSV 자체를 다시 읽어서(추가/변경) 자동 반영도 가능
+    // setInterval(loadAndRender, 60 * 1000);
   </script>
 </body>
 </html>
