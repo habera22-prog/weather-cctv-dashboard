@@ -2,457 +2,190 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CCTV 대시보드</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CCTV 전국 현황(12권역)</title>
   <style>
-    body { font-family: system-ui, -apple-system, "Malgun Gothic", Arial, sans-serif; margin: 20px; }
-    h2 { margin: 0 0 10px; }
-    .topbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom: 12px; }
-    input[type="search"] { padding: 8px 10px; min-width: 260px; }
-    .wrap { display: grid; grid-template-columns: 260px 1fr; gap: 14px; }
-    @media (max-width: 860px){ .wrap { grid-template-columns: 1fr; } }
-    .panel { border:1px solid #eee; border-radius:10px; overflow:hidden; background:#fff; }
-    .panel h3 { margin:0; padding:10px 12px; background:#fafafa; border-bottom:1px solid #eee; font-size:14px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
-    .regions { max-height: 70vh; overflow:auto; }
-    .regions button {
-      width:100%; text-align:left; padding:10px 12px; border:0; background:#fff; border-bottom:1px solid #f3f3f3;
-      cursor:pointer;
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
+    h1 { font-size: 20px; margin: 0 0 8px; }
+    .sub { color:#666; margin: 0 0 18px; font-size: 13px; }
+
+    .layout { display: grid; grid-template-columns: 360px 1fr; gap: 14px; }
+    @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } }
+
+    .grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    button.btn {
+      width: 100%;
+      text-align: left;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid #ddd;
+      background: #fff;
+      cursor: pointer;
     }
-    .regions button.active { background:#f0f7ff; font-weight:700; }
-    .list { padding: 6px 0; }
-    .item {
-      display:flex; justify-content:space-between; align-items:center; gap:10px;
-      padding: 12px; border-bottom: 1px solid #eee;
+    button.btn:hover { border-color:#bbb; }
+    button.btn.active { border-color:#111; box-shadow: 0 0 0 2px rgba(0,0,0,0.06); }
+
+    .note { font-size:12px; color:#666; margin-top:6px; }
+
+    .panel {
+      border: 1px solid #ddd;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #fff;
+      min-height: 520px;
+      display: flex;
+      flex-direction: column;
     }
-    .item small { color:#666; }
-    .btn {
-      padding: 8px 10px; cursor:pointer; border:1px solid #ddd; background:#fff; border-radius:8px;
+    .panelHead {
+      padding: 12px 14px;
+      border-bottom: 1px solid #eee;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
     }
-    .btn:hover { background:#fafafa; }
-    .btn.primary { border-color:#cfe3ff; background:#f0f7ff; }
-    .btn.primary:hover { background:#e8f2ff; }
+    .titleBox { display:flex; flex-direction:column; gap: 4px; }
+    .panelTitle { font-weight: 700; }
+    .panelMeta { font-size: 12px; color:#666; }
 
-    .empty { color:#666; padding: 14px 12px; }
-    .count { color:#666; font-size:12px; }
-    .hint { padding:8px 12px; font-size:11px; color:#777; border-top:1px solid #f3f3f3; background:#fff; }
-    .bar { margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap; }
-
-    /* ✅ 데스크탑: 좌측 접기/펼치기 */
-    .wrap.left-collapsed { grid-template-columns: 1fr; }
-    .wrap.left-collapsed .leftPanel { display:none; }
-
-    /* ✅ 모바일: 좌측 패널을 드로어처럼 */
-    .mobile-dim { display:none; }
-
-    @media (max-width: 860px){
-      .wrap { grid-template-columns: 1fr; }
-      .leftPanel { display:none; }
-
-      .wrap.left-open .leftPanel{
-        display:block;
-        position: fixed;
-        top: 64px;
-        left: 12px;
-        right: 12px;
-        bottom: 12px;
-        background:#fff;
-        z-index: 9999;
-        box-shadow: 0 10px 30px rgba(0,0,0,.12);
-      }
-      .wrap.left-open .rightPanel{ opacity:.25; pointer-events:none; }
-
-      .wrap.left-open ~ .mobile-dim{
-        display:block;
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,.25);
-        z-index: 9998;
-      }
+    .actions { display:flex; gap: 8px; align-items:center; }
+    a.linkBtn {
+      display:inline-block;
+      padding: 8px 10px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      text-decoration:none;
+      color:#111;
+      font-size: 12px;
+      background:#fff;
+      white-space:nowrap;
     }
+
+    .viewer {
+      flex: 1;
+      background: #fafafa;
+      position: relative;
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #fff;
+    }
+
+    .empty {
+      padding: 24px;
+      color:#666;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .hint { margin-top: 10px; font-size: 12px; color:#888; }
+    .warn { margin-top: 8px; font-size: 12px; color:#b26a00; }
   </style>
 </head>
-
 <body>
-  <h2 id="title">CCTV 대시보드</h2>
+  <h1>권역별 CCTV 바로보기</h1>
+  <p class="sub">버튼을 누르면 이 페이지 안에서 CCTV 화면을 표시합니다.</p>
 
-  <div class="topbar">
-    <input id="q" type="search" placeholder="검색: 지역/이름/제공자" />
-    <button id="openLeft" class="btn primary" type="button">☰ 목록</button>
-    <span class="count" id="count"></span>
-  </div>
-
-  <!-- ✅ 메일 12권역 상단 버튼 -->
-  <div id="broadBar" class="bar">
-    <button class="btn" data-broad="">전체</button>
-    <button class="btn" data-broad="수도권(서울)">수도권(서울)</button>
-    <button class="btn" data-broad="수도권(경기)">수도권(경기)</button>
-    <button class="btn" data-broad="수도권(인천)">수도권(인천)</button>
-    <button class="btn" data-broad="강원(영서)">강원(영서)</button>
-    <button class="btn" data-broad="강원(영동)">강원(영동)</button>
-    <button class="btn" data-broad="충청(충남)">충청(충남)</button>
-    <button class="btn" data-broad="충청(충북)">충청(충북)</button>
-    <button class="btn" data-broad="호남(전북)">호남(전북)</button>
-    <button class="btn" data-broad="호남(전남)">호남(전남)</button>
-    <button class="btn" data-broad="영남(경북)">영남(경북)</button>
-    <button class="btn" data-broad="영남(경남)">영남(경남)</button>
-    <button class="btn" data-broad="제주">제주</button>
-  </div>
-
-  <div class="wrap" id="wrap">
-    <div class="panel leftPanel">
-      <h3>
-        <span id="leftTitle">권역(메일 12)</span>
-        <button id="toggleLeft" class="btn" type="button">전체 지역 보기</button>
-      </h3>
-      <div class="regions" id="regions">불러오는 중…</div>
-      <div class="hint" id="leftHint">※ 기본 노출: 메일에서 사용하는 12권역 기준</div>
+  <div class="layout">
+    <div>
+      <div id="grid" class="grid"></div>
     </div>
 
-    <div class="panel rightPanel">
-      <h3 id="listTitle">목록</h3>
-      <div class="list" id="list">불러오는 중…</div>
-    </div>
-  </div>
-
-  <div class="mobile-dim" id="mobileDim"></div>
-
-<script>
-  const BROAD_MAP = {
-    "수도권(서울)": ["서울"],
-    "수도권(경기)": ["경기", "수원", "용인", "성남"],
-    "수도권(인천)": ["인천"],
-    "강원(영서)": ["원주", "춘천"],
-    "강원(영동)": ["강릉", "속초"],
-    "충청(충남)": ["천안", "아산"],
-    "충청(충북)": ["청주"],
-    "호남(전북)": ["전주"],
-    "호남(전남)": ["광주"],
-    "영남(경북)": ["대구", "포항"],
-    "영남(경남)": ["부산", "창원"],
-    "제주": ["제주"]
-  };
-
-  // =========================
-  // 1) 기본 설정
-  // =========================
-  const DEFAULT_BROADS = [
-    "수도권(서울)","수도권(경기)","수도권(인천)",
-    "강원(영서)","강원(영동)",
-    "충청(충남)","충청(충북)",
-    "호남(전북)","호남(전남)",
-    "영남(경북)","영남(경남)",
-    "제주"
-  ];
-
-  const GYEONGGI_CITIES = ["수원","성남","용인","고양","부천","안산","안양","남양주","화성","평택","의정부","시흥","파주","광명","김포","군포","이천","오산","구리","포천","양주","하남","동두천","여주","과천","가평","양평","연천"];
-  const GW_YEONGDONG = ["강릉","속초","동해","삼척","태백","고성","양양"];
-  const GW_YEONGSEO = ["춘천","원주","홍천","횡성","영월","정선","철원","화천","인제","평창"];
-  const CN_CITIES = ["대전","세종","천안","아산","공주","논산","계룡","당진","서산","보령","홍성","예산","서천","청양","태안","금산"];
-  const CB_CITIES = ["청주","충주","제천","진천","음성","괴산","증평","보은","옥천","영동","단양"];
-  const JB_CITIES = ["전주","익산","군산","정읍","남원","김제","완주","진안","무주","장수","임실","순창","고창","부안"];
-  const JN_CITIES = ["광주","목포","여수","순천","나주","광양","담양","곡성","구례","고흥","보성","화순","장흥","강진","해남","영암","무안","함평","영광","장성","완도","진도","신안"];
-  const GB_CITIES = ["대구","포항","경주","김천","안동","구미","영주","영천","상주","문경","경산","울진","울릉","청송","영덕","예천","봉화","의성","칠곡","성주","고령","군위"];
-  const GN_CITIES = ["부산","울산","창원","김해","진주","양산","거제","통영","사천","밀양","함안","창녕","고성","남해","하동","산청","함양","거창","합천"];
-
-  function normalize(s){ return String(s || "").toLowerCase(); }
-  function prefixOfRegion(region){
-    return String(region || "").trim().split(/\s+/)[0] || "";
-  }
-
-  function regionToBroad(region){
-    const r = String(region || "");
-    const p = prefixOfRegion(r);
-
-    if (p === "서울") return "수도권(서울)";
-    if (p === "인천") return "수도권(인천)";
-    if (p === "제주" || r.includes("제주")) return "제주";
-
-    for (const c of GYEONGGI_CITIES) if (r.startsWith(c)) return "수도권(경기)";
-    if (r.includes("경기")) return "수도권(경기)";
-
-    for (const c of GW_YEONGDONG) if (r.startsWith(c)) return "강원(영동)";
-    for (const c of GW_YEONGSEO) if (r.startsWith(c)) return "강원(영서)";
-    if (r.includes("강원")) return "강원(영서)";
-
-    for (const c of CN_CITIES) if (r.startsWith(c)) return "충청(충남)";
-    for (const c of CB_CITIES) if (r.startsWith(c)) return "충청(충북)";
-    if (r.includes("충남")) return "충청(충남)";
-    if (r.includes("충북")) return "충청(충북)";
-
-    for (const c of JB_CITIES) if (r.startsWith(c)) return "호남(전북)";
-    for (const c of JN_CITIES) if (r.startsWith(c)) return "호남(전남)";
-    if (r.includes("전북")) return "호남(전북)";
-    if (r.includes("전남")) return "호남(전남)";
-
-    for (const c of GB_CITIES) if (r.startsWith(c)) return "영남(경북)";
-    for (const c of GN_CITIES) if (r.startsWith(c)) return "영남(경남)";
-    if (r.includes("경북")) return "영남(경북)";
-    if (r.includes("경남")) return "영남(경남)";
-
-    return "기타";
-  }
-
-  function flatten(db){
-    const out = [];
-    Object.keys(db || {}).forEach(region => {
-      (db[region] || []).forEach(row => {
-        out.push({
-          ...row,
-          regionKey: region,
-          region: row.region || region,
-          broad: regionToBroad(region)
-        });
-      });
-    });
-    return out;
-  }
-
-  // =========================
-  // 2) DOM
-  // =========================
-  const $wrap      = document.getElementById("wrap");
-  const $regions   = document.getElementById("regions");
-  const $list      = document.getElementById("list");
-  const $q         = document.getElementById("q");
-  const $count     = document.getElementById("count");
-  const $listTitle = document.getElementById("listTitle");
-  const $broadBar  = document.getElementById("broadBar");
-  const $toggleLeft= document.getElementById("toggleLeft");
-  const $leftTitle = document.getElementById("leftTitle");
-  const $leftHint  = document.getElementById("leftHint");
-  const $openLeft  = document.getElementById("openLeft");
-  const $mobileDim = document.getElementById("mobileDim");
-
-  // =========================
-  // 3) 상태
-  // =========================
-  let DB = {};
-  let currentBroad = "";     // "" = 전체
-  let leftMode = "broad";    // "broad"(12권역) or "all"(전체 지역)
-  let currentRegionKey = ""; // leftMode="all"일 때만 사용
-
-  // =========================
-  // ✅ 좌측 패널 UX(데스크탑: 접기 / 모바일: 드로어)
-  // =========================
-  function isMobile(){
-    return window.matchMedia("(max-width: 860px)").matches;
-  }
-
-  function applyInitialLeftState(){
-    if (isMobile()){
-      $wrap.classList.remove("left-open");
-      $wrap.classList.remove("left-collapsed"); // 모바일은 그리드 1열
-    } else {
-      $wrap.classList.remove("left-open");
-      $wrap.classList.add("left-collapsed");    // 데스크탑은 기본 접힘
-    }
-  }
-
-  function closeLeftIfMobile(){
-    if (isMobile()) $wrap.classList.remove("left-open");
-  }
-
-  applyInitialLeftState();
-  window.addEventListener("resize", applyInitialLeftState);
-
-  $openLeft.addEventListener("click", () => {
-    if (isMobile()){
-      $wrap.classList.toggle("left-open");
-    } else {
-      $wrap.classList.toggle("left-collapsed");
-    }
-  });
-
-  if ($mobileDim){
-    $mobileDim.addEventListener("click", () => {
-      $wrap.classList.remove("left-open");
-    });
-  }
-
-  // =========================
-  // 4) 렌더링
-  // =========================
-  function renderLeft(){
-    const rows = flatten(DB);
-    const total = rows.length;
-
-    if (leftMode === "broad") {
-      $leftTitle.textContent = "권역(메일 12)";
-      $leftHint.textContent = "※ 기본 노출: 메일에서 사용하는 12권역 기준";
-      $toggleLeft.textContent = "전체 지역 보기";
-
-      const counts = {};
-      for (const b of DEFAULT_BROADS) counts[b] = 0;
-      rows.forEach(r => { if (counts[r.broad] != null) counts[r.broad]++; });
-
-      $regions.innerHTML = [
-        `<button data-broad="" class="${currentBroad==="" ? "active":""}">전체 보기 <span class="count">(${total})</span></button>`,
-        ...DEFAULT_BROADS.map(b => {
-          const n = counts[b] || 0;
-          const active = (currentBroad === b) ? "active" : "";
-          return `<button data-broad="${b}" class="${active}">${b} <span class="count">(${n})</span></button>`;
-        })
-      ].join("");
-
-      $regions.querySelectorAll("button[data-broad]").forEach(btn => {
-        btn.addEventListener("click", () => {
-          currentRegionKey = "";
-          currentBroad = btn.getAttribute("data-broad") || "";
-          syncBroadButtons();
-          renderList();
-          renderLeft();
-          closeLeftIfMobile();
-        });
-      });
-
-    } else {
-      $leftTitle.textContent = "지역(전체)";
-      $leftHint.textContent = "※ DB에 등록된 전체 지역 목록(200+ 확장 가능)";
-      $toggleLeft.textContent = "메일 12권역 보기";
-
-      const regionKeys = Object.keys(DB || {}).sort();
-      $regions.innerHTML = [
-        `<button data-region="" class="${currentRegionKey==="" ? "active":""}">전체 보기 <span class="count">(${total})</span></button>`,
-        ...regionKeys.map(k => {
-          const n = (DB[k] || []).length;
-          const active = (currentRegionKey === k) ? "active" : "";
-          return `<button data-region="${k}" class="${active}">${k} <span class="count">(${n})</span></button>`;
-        })
-      ].join("");
-
-      $regions.querySelectorAll("button[data-region]").forEach(btn => {
-        btn.addEventListener("click", () => {
-          currentBroad = "";
-          syncBroadButtons();
-          currentRegionKey = btn.getAttribute("data-region") || "";
-          renderList();
-          renderLeft();
-          closeLeftIfMobile();
-        });
-      });
-    }
-  }
-
-  function syncBroadButtons(){
-    if (!$broadBar) return;
-    $broadBar.querySelectorAll("button[data-broad]").forEach(b => {
-      const val = b.getAttribute("data-broad") || "";
-      b.style.fontWeight = (val === currentBroad) ? "700" : "400";
-      b.style.background = (val === currentBroad) ? "#f0f7ff" : "#fff";
-    });
-  }
-
-  function renderList(){
-    const query = normalize($q.value);
-    const all = flatten(DB);
-
-    let rows = all;
-
-    if (leftMode === "broad") {
-      if (currentBroad && BROAD_MAP[currentBroad]) {
-        const keys = BROAD_MAP[currentBroad];
-        rows = rows.filter(x =>
-          keys.some(k => (x.region || "").includes(k))
-        );
-      }
-    } else {
-      if (currentRegionKey) rows = rows.filter(x => x.regionKey === currentRegionKey);
-    }
-
-    if (query) {
-      rows = rows.filter(x =>
-        normalize(x.region).includes(query) ||
-        normalize(x.name).includes(query) ||
-        normalize(x.provider).includes(query) ||
-        normalize(x.broad).includes(query)
-      );
-    }
-
-    const title =
-      leftMode === "broad"
-        ? (currentBroad ? `목록 - ${currentBroad}` : "목록 - 전체")
-        : (currentRegionKey ? `목록 - ${currentRegionKey}` : "목록 - 전체");
-
-    $listTitle.textContent = title;
-    $count.textContent = `표시: ${rows.length}개`;
-
-    if (!rows.length){
-      $list.innerHTML = `<div class="empty">조건에 맞는 CCTV가 없습니다.</div>`;
-      return;
-    }
-
-    $list.innerHTML = rows.map(r => `
-      <div class="item">
-        <div>
-          <b>${r.name || "-"}</b><br/>
-          <small>${r.region} · ${r.provider || "-"} · ${r.broad || "-"}</small>
+    <div class="panel">
+      <div class="panelHead">
+        <div class="titleBox">
+          <div id="panelTitle" class="panelTitle">선택된 CCTV 없음</div>
+          <div id="panelMeta" class="panelMeta">왼쪽에서 권역을 선택하세요.</div>
         </div>
-        <button class="btn" data-url="${(r.url || "").replaceAll('"','&quot;')}">새창 재생</button>
+        <div class="actions">
+          <a id="openNew" class="linkBtn" href="#" target="_blank" rel="noopener noreferrer" style="display:none;">새창으로 열기</a>
+          <a id="openDirect" class="linkBtn" href="#" target="_self" rel="noopener noreferrer" style="display:none;">바로가기</a>
+        </div>
       </div>
-    `).join("");
+      <div class="viewer">
+        <div id="empty" class="empty">
+          좌측 버튼을 누르면 여기에서 CCTV 페이지가 표시됩니다.<br/>
+          <div class="warn">※ 일부 CCTV 사이트는 보안정책(X-Frame-Options/CSP) 때문에 페이지 내 표시가 막힐 수 있습니다.</div>
+          <div class="hint">그 경우, 우측 상단의 “새창으로 열기”를 사용하세요.</div>
+        </div>
+        <iframe id="frame" src="about:blank" style="display:none;"></iframe>
+      </div>
+    </div>
+  </div>
 
-    $list.querySelectorAll("button[data-url]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const url = btn.getAttribute("data-url");
-        if (!url) return;
-        window.open(url, "_blank", "noopener,noreferrer");
-      });
-    });
-  }
+  <script>
+    // ✅ 여기에 네 리스트를 그대로 넣으면 됨
+    // Apps Script로 만들면 JSON.stringify(list, null, 2) 결과를 붙여넣으면 끝
+    const CCTV_LIST = [
+      // 예시:
+      // { region: "수도권(서울) 시청", url: "https://www.utic.go.kr/view/map?cctvid=..." , note:"시청 중심" },
+      // { region: "수도권(서울) 이면", url: "https://www.utic.go.kr/view/map?cctvid=..." , note:"이면도로" }
+    ];
 
-  // =========================
-  // 5) 이벤트
-  // =========================
-  $q.addEventListener("input", renderList);
+    const grid = document.getElementById("grid");
+    const frame = document.getElementById("frame");
+    const empty = document.getElementById("empty");
+    const panelTitle = document.getElementById("panelTitle");
+    const panelMeta = document.getElementById("panelMeta");
+    const openNew = document.getElementById("openNew");
+    const openDirect = document.getElementById("openDirect");
 
-  if ($broadBar) {
-    $broadBar.querySelectorAll("button[data-broad]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        leftMode = "broad";
-        currentRegionKey = "";
-        currentBroad = btn.getAttribute("data-broad") || "";
-        syncBroadButtons();
-        renderLeft();
-        renderList();
-      });
-    });
-  }
+    let activeBtn = null;
 
-  $toggleLeft.addEventListener("click", () => {
-    if (leftMode === "broad") {
-      leftMode = "all";
-      currentBroad = "";
-      syncBroadButtons();
-    } else {
-      leftMode = "broad";
-      currentRegionKey = "";
+    function selectItem(item, btn) {
+      if (activeBtn) activeBtn.classList.remove("active");
+      activeBtn = btn;
+      activeBtn.classList.add("active");
+
+      panelTitle.textContent = item.region || "CCTV";
+      panelMeta.textContent = item.note ? item.note : " ";
+
+      // iframe로 페이지 안에 표시
+      empty.style.display = "none";
+      frame.style.display = "block";
+      frame.src = item.url;
+
+      // 보조 링크(필요하면 사용)
+      openNew.style.display = "inline-block";
+      openNew.href = item.url;
+
+      openDirect.style.display = "inline-block";
+      openDirect.href = item.url; // 같은 페이지 이동용(원하면 제거 가능)
     }
-    renderLeft();
-    renderList();
-  });
 
-  // =========================
-  // 6) 데이터 로드
-  // =========================
-  const dataUrl = new URL("data/cctv_index.json", window.location.href).toString();
+    function render() {
+      if (!CCTV_LIST || CCTV_LIST.length === 0) {
+        grid.innerHTML = '<div style="color:#999;font-size:13px;">CCTV_LIST가 비어있습니다.</div>';
+        return;
+      }
 
-  fetch(dataUrl, { cache: "no-store" })
-    .then(res => {
-      if (!res.ok) throw new Error("HTTP " + res.status + " @ " + dataUrl);
-      return res.json();
-    })
-    .then(data => {
-      DB = data || {};
-      syncBroadButtons();
-      renderLeft();
-      renderList();
-    })
-    .catch(err => {
-      console.error(err);
-      $regions.innerHTML = "";
-      $list.innerHTML = `<div class="empty">데이터 로드 실패</div>`;
-      $count.textContent = "에러: 콘솔(F12) 확인";
-    });
-</script>
+      CCTV_LIST.forEach(item => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "btn";
+        btn.innerHTML = `
+          <div><b>${escapeHtml(item.region || "CCTV")}</b></div>
+          ${item.note ? `<div class="note">${escapeHtml(item.note)}</div>` : ""}
+        `;
+        btn.addEventListener("click", () => selectItem(item, btn));
+        grid.appendChild(btn);
+      });
+
+      // 첫 번째 자동 선택(원하면 주석)
+      selectItem(CCTV_LIST[0], grid.querySelector("button.btn"));
+    }
+
+    function escapeHtml(s){
+      return String(s || "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    render();
+  </script>
 </body>
 </html>
