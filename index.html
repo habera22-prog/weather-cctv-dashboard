@@ -24,7 +24,7 @@
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       background:var(--bg);
       color:var(--text);
-      overflow:hidden; /* ✅ 페이지 자체 스크롤 방지(관제센터 느낌) */
+      overflow:hidden; /* 페이지 자체 스크롤 방지 */
     }
 
     header{
@@ -56,20 +56,17 @@
     }
     .btn:hover{ border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.10); }
 
-    /* ✅ 관제센터 그리드(헤더 제외한 영역을 전부 사용) */
+    /* ✅ 관제 그리드: "페이지 단위" 표시이므로 스크롤을 없애고, 화면에 딱 맞게 */
     .grid{
       height: calc(100vh - var(--headerH));
       padding: var(--gap);
       box-sizing:border-box;
 
       display:grid;
-      grid-template-columns: repeat(4, minmax(260px, 1fr)); /* ✅ 4열 유지 */
+      grid-template-columns: repeat(4, minmax(260px, 1fr)); /* 4열 유지 */
       gap: var(--gap);
 
-      overflow-y:auto;   /* ✅ 스크롤 허용(요청) */
-      overflow-x:hidden;
-
-      /* ✅ 행(카드) 최소 높이 확보 → 영상 세로 확보 체감 */
+      overflow:hidden; /* ✅ 페이지 스크롤 X (넘김으로만 이동) */
       grid-auto-rows: minmax(420px, auto);
       align-items:start;
     }
@@ -77,24 +74,14 @@
     @media (max-width: 900px) { .grid{ grid-template-columns: repeat(2, minmax(240px, 1fr)); } }
     @media (max-width: 520px) { .grid{ grid-template-columns: 1fr; } }
 
-    /* ✅ 슬라이드 모드(권역별 순환)일 때: 카드가 왼쪽에 쏠리지 않도록 중앙 정렬 + 크게 */
-    .grid.slideMode{
-      grid-template-columns: minmax(260px, 980px); /* 한 칼럼으로 크게 */
-      justify-content: center;                    /* 가운데 정렬 */
-      align-content: start;
-    }
-
     .card{
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       overflow:hidden;
       box-shadow: 0 8px 30px rgba(0,0,0,.25);
-
       display:flex;
       flex-direction:column;
-
-      /* ✅ 카드 최소 높이(그리드 auto-rows가 더 강하게 잡아줌) */
       min-height: 240px;
     }
 
@@ -126,12 +113,10 @@
     .frameWrap{
       position:relative;
       background:#111;
-
-      aspect-ratio: 4 / 3;   /* ✅ 4:3 */
+      aspect-ratio: 4 / 3;
       width:100%;
       min-height: 260px;
-
-      flex:none;             /* ✅ 비율이 “진짜” 먹도록 (중요) */
+      flex:none;
     }
     iframe{
       position:absolute; inset:0;
@@ -180,22 +165,41 @@
       white-space: pre-line;
     }
     .toast.show{ opacity:1; }
+
+    /* ✅ 페이지 전환 감성(관제 느낌): 살짝 페이드 */
+    .grid.fadeOut{ opacity:.18; transition: opacity .18s ease; }
+    .grid.fadeIn{ opacity:1; transition: opacity .18s ease; }
   </style>
 </head>
 
 <body>
   <header>
     <div>
-      <div class="title">CCTV 모니터링 </div>
+      <div class="title">CCTV 모니터링</div>
       <div class="sub" id="statusText">데이터 로딩 중…</div>
     </div>
 
     <div class="controls">
+      <button class="btn" id="reloadPage">현재 페이지 리로드</button>
       <button class="btn" id="reloadAll">전체 리로드</button>
-      <button class="btn" id="toggleAuto">자동 새로고침: OFF</button>
-      <button class="btn" id="toggleSlide">슬라이드: OFF</button>
-      <button class="btn" id="nextSlide">다음 권역</button>
-      <span class="sub" id="autoInfo">권장: 5~10분</span>
+
+      <button class="btn" id="prevPage">◀ 이전</button>
+      <button class="btn" id="nextPage">다음 ▶</button>
+
+      <button class="btn" id="togglePageAuto">페이지 자동넘김: OFF</button>
+      <span class="sub" id="pageInfo">-</span>
+
+      <span class="sub">페이지당</span>
+      <button class="btn" id="minusPerPage">-</button>
+      <span class="sub" id="perPageText">8개</span>
+      <button class="btn" id="plusPerPage">+</button>
+
+      <span class="sub">간격</span>
+      <button class="btn" id="minusSec">-</button>
+      <span class="sub" id="secText">10초</span>
+      <button class="btn" id="plusSec">+</button>
+
+      <button class="btn" id="toggleReloadOnPage">페이지 넘김 시 리로드: OFF</button>
     </div>
   </header>
 
@@ -206,23 +210,26 @@
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZZaK8GDz_FZsefh-XoCkPmQhKOugjSRNioC5M8fAUH87iiyQV8KK28wCVN4_dbWJukM-Rbwkkbz_G/pub?gid=1422576665&single=true&output=csv";
 
     const grid = document.getElementById("grid");
-    const reloadAllBtn = document.getElementById("reloadAll");
-    const toggleAutoBtn = document.getElementById("toggleAuto");
-    const toggleSlideBtn = document.getElementById("toggleSlide");
-    const nextSlideBtn = document.getElementById("nextSlide");
-    const autoInfo = document.getElementById("autoInfo");
     const statusText = document.getElementById("statusText");
     const toast = document.getElementById("toast");
 
-    let autoOn = false;
-    let autoTimer = null;
-    const AUTO_MIN = 5;
+    const reloadAllBtn = document.getElementById("reloadAll");
+    const reloadPageBtn = document.getElementById("reloadPage");
+    const prevPageBtn = document.getElementById("prevPage");
+    const nextPageBtn = document.getElementById("nextPage");
 
-    let slideOn = false;
-    let slideTimer = null;
-    const SLIDE_SEC = 5;
-    let slideGroups = [];
-    let slideIdx = 0;
+    const togglePageAutoBtn = document.getElementById("togglePageAuto");
+    const pageInfo = document.getElementById("pageInfo");
+
+    const minusPerPageBtn = document.getElementById("minusPerPage");
+    const plusPerPageBtn = document.getElementById("plusPerPage");
+    const perPageText = document.getElementById("perPageText");
+
+    const minusSecBtn = document.getElementById("minusSec");
+    const plusSecBtn = document.getElementById("plusSec");
+    const secText = document.getElementById("secText");
+
+    const toggleReloadOnPageBtn = document.getElementById("toggleReloadOnPage");
 
     function showToast(msg){
       toast.textContent = msg;
@@ -282,7 +289,6 @@
 
     function mapCsvToItems(rows){
       if (!rows || rows.length < 2) return [];
-
       const header = rows[0];
       const idx = {};
       header.forEach((h, i) => idx[normalizeHeaders(h)] = i);
@@ -311,58 +317,6 @@
       }
     }
 
-    function computeGroups(){
-      const groups = new Set();
-      document.querySelectorAll(".card").forEach(card => {
-        const g = (card.dataset.group || "").trim();
-        if (g) groups.add(g);
-      });
-      slideGroups = Array.from(groups);
-      slideIdx = 0;
-    }
-
-    function showGroup(group){
-      const cards = Array.from(document.querySelectorAll(".card"));
-      cards.forEach(card => {
-        card.style.display = (card.dataset.group === group) ? "flex" : "none";
-      });
-      grid.scrollTop = 0;
-      showToast(`슬라이드: ${group} (${Math.min(slideIdx+1, slideGroups.length)}/${slideGroups.length})`);
-    }
-
-    function stepSlide(){
-      if (!slideGroups.length) return;
-      if (slideIdx >= slideGroups.length) slideIdx = 0;
-      const g = slideGroups[slideIdx];
-      showGroup(g);
-      slideIdx = (slideIdx + 1) % slideGroups.length;
-    }
-
-    function setSlide(on){
-      slideOn = on;
-      toggleSlideBtn.textContent = "슬라이드: " + (slideOn ? "ON" : "OFF");
-
-      if (slideTimer) clearInterval(slideTimer);
-      slideTimer = null;
-
-      if (slideOn){
-        grid.classList.add("slideMode");
-        computeGroups();
-        if (!slideGroups.length){
-          showToast("슬라이드: 권역 데이터 없음");
-          slideOn = false;
-          toggleSlideBtn.textContent = "슬라이드: OFF";
-          grid.classList.remove("slideMode");
-          return;
-        }
-        stepSlide();
-        slideTimer = setInterval(stepSlide, SLIDE_SEC * 1000);
-      }else{
-        grid.classList.remove("slideMode");
-        document.querySelectorAll(".card").forEach(card => card.style.display = "flex");
-      }
-    }
-
     function buildCard(item, idx){
       const region = item.region || "-";
       const note = item.note || "";
@@ -370,7 +324,8 @@
 
       const card = document.createElement("div");
       card.className = "card";
-      card.dataset.group = region;
+      card.dataset.region = region;
+      card.dataset.url = url;
 
       card.innerHTML = `
         <div class="cardHead">
@@ -414,11 +369,126 @@
       return card;
     }
 
+    // -----------------------------
+    // ✅ 페이징(관제 페이지 넘김)
+    // -----------------------------
+    let allItems = [];
+    let page = 0;
+
+    // 기본값(요청: 관제처럼 "페이지 단위로 넘기기")
+    let perPage = 8;          // 한 페이지당 카드 수
+    let pageAutoOn = false;   // 자동 넘김
+    let pageSec = 10;         // 자동 넘김 간격(초)
+    let pageAutoTimer = null;
+
+    // 페이지 이동 시, 현재 페이지 iframe만 리로드할지(옵션)
+    let reloadOnPage = false;
+
+    function totalPages(){
+      return Math.max(1, Math.ceil(allItems.length / perPage));
+    }
+
+    function clampPage(){
+      const tp = totalPages();
+      if (page < 0) page = tp - 1;
+      if (page >= tp) page = 0;
+    }
+
+    function renderPage({fade=true} = {}){
+      clampPage();
+      const tp = totalPages();
+      const start = page * perPage;
+      const end = start + perPage;
+      const slice = allItems.slice(start, end);
+
+      const now = new Date();
+      statusText.textContent =
+        `표시 ${allItems.length}개 · 마지막 로드: ${now.toLocaleString("ko-KR")} · (시트 수정 시 새로고침하면 반영)`;
+
+      pageInfo.textContent = `페이지 ${page+1}/${tp} · ${perPage}개/페이지`;
+
+      if (fade){
+        grid.classList.remove("fadeIn");
+        grid.classList.add("fadeOut");
+      }
+
+      setTimeout(() => {
+        grid.innerHTML = "";
+        slice.forEach((item, idx) => {
+          // idx는 페이지 기준이 아니라 전체 기준이 overlay id에 쓰일 수 있어 겹치지 않게 글로벌 인덱스 사용
+          const globalIdx = start + idx;
+          grid.appendChild(buildCard(item, globalIdx));
+        });
+
+        grid.classList.remove("fadeOut");
+        grid.classList.add("fadeIn");
+
+        if (reloadOnPage){
+          reloadCurrentPage();
+        }
+      }, fade ? 140 : 0);
+    }
+
+    function goNextPage(){
+      page++;
+      renderPage();
+      showToast("다음 페이지");
+    }
+    function goPrevPage(){
+      page--;
+      renderPage();
+      showToast("이전 페이지");
+    }
+
     function reloadAll(){
+      // 현재 렌더링된 iframe 포함, 전체 items 기준으로 "현재 페이지"만 보이므로
+      // 전체 리로드는 '현재 페이지 iframe'도 리로드하고,
+      // 그리고 다음 페이지로 넘어가도 새로 src가 구성될 때 cacheBust로 새로고침됨.
       document.querySelectorAll(".card iframe").forEach(iframe => {
         iframe.src = withCacheBust(iframe.src);
       });
-      showToast("전체 리로드 완료");
+      showToast("전체 리로드(현재 화면) 완료");
+    }
+
+    function reloadCurrentPage(){
+      document.querySelectorAll(".card iframe").forEach(iframe => {
+        iframe.src = withCacheBust(iframe.src);
+      });
+      showToast("현재 페이지 리로드 완료");
+    }
+
+    function setPageAuto(on){
+      pageAutoOn = on;
+      togglePageAutoBtn.textContent = "페이지 자동넘김: " + (pageAutoOn ? "ON" : "OFF");
+
+      if (pageAutoTimer) clearInterval(pageAutoTimer);
+      pageAutoTimer = null;
+
+      if (pageAutoOn){
+        pageAutoTimer = setInterval(() => {
+          goNextPage();
+        }, pageSec * 1000);
+        showToast("페이지 자동넘김 ON");
+      }else{
+        showToast("페이지 자동넘김 OFF");
+      }
+    }
+
+    function setReloadOnPage(on){
+      reloadOnPage = on;
+      toggleReloadOnPageBtn.textContent = "페이지 넘김 시 리로드: " + (reloadOnPage ? "ON" : "OFF");
+      showToast(reloadOnPage ? "페이지 전환 시 리로드 ON" : "페이지 전환 시 리로드 OFF");
+    }
+
+    function updatePerPageUI(){
+      perPageText.textContent = perPage + "개";
+      renderPage({fade:false});
+    }
+    function updateSecUI(){
+      secText.textContent = pageSec + "초";
+      if (pageAutoOn){
+        setPageAuto(true); // 타이머 재설정
+      }
     }
 
     async function loadAndRender(){
@@ -438,51 +508,63 @@
           return;
         }
 
-        items.forEach((item, idx) => grid.appendChild(buildCard(item, idx)));
-
-        const now = new Date();
-        statusText.textContent =
-          `표시 ${items.length}개 · 마지막 로드: ${now.toLocaleString("ko-KR")} · (시트 수정 시 새로고침하면 반영)`;
-
-        if (slideOn){
-          computeGroups();
-          stepSlide();
-        }
+        allItems = items;
+        page = 0;
+        renderPage({fade:false});
       }catch(e){
         statusText.textContent = "로딩 실패: " + (e.message || e);
       }
     }
 
+    // -----------------------------
+    // ✅ 이벤트 바인딩
+    // -----------------------------
     reloadAllBtn.addEventListener("click", reloadAll);
-
-    toggleAutoBtn.addEventListener("click", () => {
-      autoOn = !autoOn;
-      toggleAutoBtn.textContent = "자동 새로고침: " + (autoOn ? "ON" : "OFF");
-      autoInfo.textContent = autoOn ? (AUTO_MIN + "분마다 전체 리로드") : "권장: 5~10분";
-
-      if (autoTimer) clearInterval(autoTimer);
-      autoTimer = null;
-
-      if (autoOn){
-        autoTimer = setInterval(reloadAll, AUTO_MIN * 60 * 1000);
-        showToast("자동 새로고침 ON");
-      }else{
-        showToast("자동 새로고침 OFF");
-      }
+    reloadPageBtn.addEventListener("click", reloadCurrentPage);
+    nextPageBtn.addEventListener("click", () => {
+      if (!pageAutoOn) goNextPage();
+      else goNextPage();
+    });
+    prevPageBtn.addEventListener("click", () => {
+      if (!pageAutoOn) goPrevPage();
+      else goPrevPage();
     });
 
-    toggleSlideBtn.addEventListener("click", () => {
-      setSlide(!slideOn);
-      showToast(slideOn ? "슬라이드 ON" : "슬라이드 OFF");
+    togglePageAutoBtn.addEventListener("click", () => setPageAuto(!pageAutoOn));
+
+    minusPerPageBtn.addEventListener("click", () => {
+      // 최소 4개, 최대 24개(너무 과하면 가독성 떨어져서 제한)
+      perPage = Math.max(4, perPage - 4);
+      updatePerPageUI();
+    });
+    plusPerPageBtn.addEventListener("click", () => {
+      perPage = Math.min(24, perPage + 4);
+      updatePerPageUI();
     });
 
-    nextSlideBtn.addEventListener("click", () => {
-      if (!slideOn){
-        setSlide(true);
-      }else{
-        stepSlide();
-      }
+    minusSecBtn.addEventListener("click", () => {
+      pageSec = Math.max(3, pageSec - 1);
+      updateSecUI();
     });
+    plusSecBtn.addEventListener("click", () => {
+      pageSec = Math.min(60, pageSec + 1);
+      updateSecUI();
+    });
+
+    toggleReloadOnPageBtn.addEventListener("click", () => setReloadOnPage(!reloadOnPage));
+
+    // 키보드(관제실 느낌): ←/→ 로 페이지 이동, space로 자동넘김 토글
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight") { e.preventDefault(); goNextPage(); }
+      if (e.key === "ArrowLeft")  { e.preventDefault(); goPrevPage(); }
+      if (e.key === " ")          { e.preventDefault(); setPageAuto(!pageAutoOn); }
+      if (e.key.toLowerCase() === "r") { e.preventDefault(); reloadCurrentPage(); }
+    });
+
+    // 초기 UI
+    perPageText.textContent = perPage + "개";
+    secText.textContent = pageSec + "초";
+    toggleReloadOnPageBtn.textContent = "페이지 넘김 시 리로드: OFF";
 
     loadAndRender();
   </script>
