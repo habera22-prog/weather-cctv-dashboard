@@ -72,6 +72,13 @@
     @media (max-width: 900px) { .grid{ grid-template-columns: repeat(2, minmax(240px, 1fr)); } }
     @media (max-width: 520px) { .grid{ grid-template-columns: 1fr; } }
 
+    /* ✅ 슬라이드 모드(권역별 순환)일 때: 카드가 왼쪽에 쏠리지 않도록 중앙 정렬 + 크게 */
+    .grid.slideMode{
+      grid-template-columns: minmax(260px, 980px); /* 한 칼럼으로 크게 */
+      justify-content: center;                    /* 가운데 정렬 */
+      align-content: start;
+    }
+
     .card{
       background: var(--panel);
       border: 1px solid var(--border);
@@ -186,7 +193,7 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    // ✅ 네가 준 “대표CCTV 웹 게시 CSV” URL
+    // ✅ 대표CCTV 웹 게시 CSV
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZZaK8GDz_FZsefh-XoCkPmQhKOugjSRNioC5M8fAUH87iiyQV8KK28wCVN4_dbWJukM-Rbwkkbz_G/pub?gid=1422576665&single=true&output=csv";
 
     const grid = document.getElementById("grid");
@@ -200,7 +207,7 @@
 
     let autoOn = false;
     let autoTimer = null;
-    const AUTO_MIN = 5; // 기본 5분
+    const AUTO_MIN = 5;
 
     // ✅ 슬라이드(권역별 순환)
     let slideOn = false;
@@ -226,7 +233,6 @@
         .replace(/</g,"&lt;").replace(/>/g,"&gt;");
     }
 
-    // ✅ CSV 파서(따옴표/쉼표 포함 케이스 대응)
     function parseCsv(text){
       const rows = [];
       let row = [], cur = "", inQ = false;
@@ -247,7 +253,6 @@
         if (!inQ && (ch === "\n" || ch === "\r")){
           if (ch === "\r" && next === "\n") i++;
           row.push(cur); cur="";
-          // 빈 줄 스킵
           if (row.some(c => String(c||"").trim() !== "")) rows.push(row);
           row = [];
           continue;
@@ -265,7 +270,7 @@
     function normalizeHeaders(h){
       return String(h||"").trim().toLowerCase()
         .replace(/\s+/g,"")
-        .replace(/[\u200b-\u200d\uFEFF]/g,""); // zero-width 제거
+        .replace(/[\u200b-\u200d\uFEFF]/g,"");
     }
 
     function mapCsvToItems(rows){
@@ -275,7 +280,6 @@
       const idx = {};
       header.forEach((h, i) => idx[normalizeHeaders(h)] = i);
 
-      // 헤더명이 다를 수도 있으니 유연하게
       const iRegion = idx["region"] ?? idx["권역"] ?? idx["지역"] ?? 0;
       const iUrl    = idx["url"] ?? idx["링크"] ?? idx["cctv"] ?? idx["주소"] ?? 1;
       const iNote   = idx["note"] ?? idx["비고"] ?? idx["설명"] ?? 2;
@@ -286,7 +290,7 @@
           url: String(r[iUrl] ?? "").trim(),
           note: String(r[iNote] ?? "").trim()
         }))
-        .filter(x => x.region && x.url); // region/url 필수
+        .filter(x => x.region && x.url);
     }
 
     function withCacheBust(url){
@@ -300,7 +304,6 @@
       }
     }
 
-    // ✅ 슬라이드 그룹 구성/표시
     function computeGroups(){
       const groups = new Set();
       document.querySelectorAll(".card").forEach(card => {
@@ -338,16 +341,19 @@
       slideTimer = null;
 
       if (slideOn){
+        grid.classList.add("slideMode"); // ✅ 중앙정렬/확대
         computeGroups();
         if (!slideGroups.length){
           showToast("슬라이드: 권역 데이터 없음");
           slideOn = false;
           toggleSlideBtn.textContent = "슬라이드: OFF";
+          grid.classList.remove("slideMode");
           return;
         }
-        stepSlide(); // 즉시 1회
+        stepSlide();
         slideTimer = setInterval(stepSlide, SLIDE_SEC * 1000);
       }else{
+        grid.classList.remove("slideMode"); // ✅ 원복
         document.querySelectorAll(".card").forEach(card => card.style.display = "flex");
       }
     }
@@ -359,7 +365,7 @@
 
       const card = document.createElement("div");
       card.className = "card";
-      card.dataset.group = region; // ✅ 슬라이드 필터용(권역명)
+      card.dataset.group = region; // ✅ 슬라이드 필터용
 
       card.innerHTML = `
         <div class="cardHead">
@@ -389,18 +395,15 @@
         </div>
       `;
 
-      // 개별 리로드
       card.querySelector('[data-action="reload"]')?.addEventListener("click", () => {
         reloadFrame(card);
       });
 
-      // 오버레이 닫기(수동용)
       card.querySelector('[data-action="hide"]')?.addEventListener("click", () => {
         const ov = card.querySelector(".overlay");
         if (ov) ov.classList.remove("show");
       });
 
-      // ✅ 자동 오버레이 표시는 제거(요청 반영)
       return card;
     }
 
@@ -438,7 +441,7 @@
         statusText.textContent =
           `표시 ${items.length}개 · 마지막 로드: ${now.toLocaleString("ko-KR")} · (시트 수정 시 새로고침하면 반영)`;
 
-        // ✅ 슬라이드가 켜져 있으면, 새로 렌더링 후에도 슬라이드 상태 유지
+        // ✅ 슬라이드 ON이면 렌더 후에도 유지
         if (slideOn){
           computeGroups();
           stepSlide();
@@ -449,7 +452,6 @@
       }
     }
 
-    // 버튼 바인딩
     reloadAllBtn.addEventListener("click", reloadAll);
 
     toggleAutoBtn.addEventListener("click", () => {
@@ -483,9 +485,6 @@
 
     // 최초 로드
     loadAndRender();
-
-    // ✅ 원하면: 1분마다 CSV 자체를 다시 읽어서(추가/변경) 자동 반영도 가능
-    // setInterval(loadAndRender, 60 * 1000);
   </script>
 </body>
 </html>
