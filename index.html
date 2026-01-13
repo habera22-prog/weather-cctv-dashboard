@@ -63,10 +63,15 @@
       box-sizing:border-box;
 
       display:grid;
-      grid-template-columns: repeat(4, minmax(260px, 1fr));
+      grid-template-columns: repeat(4, minmax(260px, 1fr)); /* ✅ 4열 유지 */
       gap: var(--gap);
 
-      overflow:auto; /* ✅ 그리드 내부만 스크롤 */
+      overflow-y:auto;   /* ✅ 스크롤 허용(요청) */
+      overflow-x:hidden;
+
+      /* ✅ 행(카드) 최소 높이 확보 → 영상 세로 확보 체감 */
+      grid-auto-rows: minmax(420px, auto);
+      align-items:start;
     }
     @media (max-width: 1200px){ .grid{ grid-template-columns: repeat(3, minmax(240px, 1fr)); } }
     @media (max-width: 900px) { .grid{ grid-template-columns: repeat(2, minmax(240px, 1fr)); } }
@@ -89,7 +94,7 @@
       display:flex;
       flex-direction:column;
 
-      /* ✅ “위에만 보여” 방지: 카드가 반드시 높이를 갖도록 */
+      /* ✅ 카드 최소 높이(그리드 auto-rows가 더 강하게 잡아줌) */
       min-height: 240px;
     }
 
@@ -118,23 +123,23 @@
     }
     .pill:hover{ border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.10); }
 
-.frameWrap{
-  position:relative;
-  background:#111;
+    .frameWrap{
+      position:relative;
+      background:#111;
 
-  aspect-ratio: 4 / 3;   /* ✅ 핵심: 세로 확보 */
-  width:100%;
+      aspect-ratio: 4 / 3;   /* ✅ 4:3 */
+      width:100%;
+      min-height: 260px;
 
-  min-height: 260px;     /* ✅ 선택: 제목/버튼 때문에 잘리는 느낌 방지 */
-}
-iframe{
-  position:absolute; inset:0; /* ✅ frameWrap을 꽉 채움 */
-  width:100%;
-  height:100%;
-  border:0;
-  background:#111;
-}
-
+      flex:none;             /* ✅ 비율이 “진짜” 먹도록 (중요) */
+    }
+    iframe{
+      position:absolute; inset:0;
+      width:100%;
+      height:100%;
+      border:0;
+      background:#111;
+    }
 
     .overlay{
       position:absolute; inset:0;
@@ -198,7 +203,6 @@ iframe{
   <div class="toast" id="toast"></div>
 
   <script>
-    // ✅ 대표CCTV 웹 게시 CSV
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZZaK8GDz_FZsefh-XoCkPmQhKOugjSRNioC5M8fAUH87iiyQV8KK28wCVN4_dbWJukM-Rbwkkbz_G/pub?gid=1422576665&single=true&output=csv";
 
     const grid = document.getElementById("grid");
@@ -214,10 +218,9 @@ iframe{
     let autoTimer = null;
     const AUTO_MIN = 5;
 
-    // ✅ 슬라이드(권역별 순환)
     let slideOn = false;
     let slideTimer = null;
-    const SLIDE_SEC = 5; // ✅ 권역당 5초
+    const SLIDE_SEC = 5;
     let slideGroups = [];
     let slideIdx = 0;
 
@@ -262,7 +265,6 @@ iframe{
           row = [];
           continue;
         }
-
         cur += ch;
       }
       if (cur.length || row.length){
@@ -331,10 +333,8 @@ iframe{
     function stepSlide(){
       if (!slideGroups.length) return;
       if (slideIdx >= slideGroups.length) slideIdx = 0;
-
       const g = slideGroups[slideIdx];
       showGroup(g);
-
       slideIdx = (slideIdx + 1) % slideGroups.length;
     }
 
@@ -346,7 +346,7 @@ iframe{
       slideTimer = null;
 
       if (slideOn){
-        grid.classList.add("slideMode"); // ✅ 중앙정렬/확대
+        grid.classList.add("slideMode");
         computeGroups();
         if (!slideGroups.length){
           showToast("슬라이드: 권역 데이터 없음");
@@ -358,7 +358,7 @@ iframe{
         stepSlide();
         slideTimer = setInterval(stepSlide, SLIDE_SEC * 1000);
       }else{
-        grid.classList.remove("slideMode"); // ✅ 원복
+        grid.classList.remove("slideMode");
         document.querySelectorAll(".card").forEach(card => card.style.display = "flex");
       }
     }
@@ -370,7 +370,7 @@ iframe{
 
       const card = document.createElement("div");
       card.className = "card";
-      card.dataset.group = region; // ✅ 슬라이드 필터용
+      card.dataset.group = region;
 
       card.innerHTML = `
         <div class="cardHead">
@@ -401,7 +401,9 @@ iframe{
       `;
 
       card.querySelector('[data-action="reload"]')?.addEventListener("click", () => {
-        reloadFrame(card);
+        const iframe = card.querySelector("iframe");
+        if (!iframe) return;
+        iframe.src = withCacheBust(iframe.src);
       });
 
       card.querySelector('[data-action="hide"]')?.addEventListener("click", () => {
@@ -412,14 +414,10 @@ iframe{
       return card;
     }
 
-    function reloadFrame(card){
-      const iframe = card.querySelector("iframe");
-      if (!iframe) return;
-      iframe.src = withCacheBust(iframe.src);
-    }
-
     function reloadAll(){
-      document.querySelectorAll(".card").forEach(card => reloadFrame(card));
+      document.querySelectorAll(".card iframe").forEach(iframe => {
+        iframe.src = withCacheBust(iframe.src);
+      });
       showToast("전체 리로드 완료");
     }
 
@@ -446,12 +444,10 @@ iframe{
         statusText.textContent =
           `표시 ${items.length}개 · 마지막 로드: ${now.toLocaleString("ko-KR")} · (시트 수정 시 새로고침하면 반영)`;
 
-        // ✅ 슬라이드 ON이면 렌더 후에도 유지
         if (slideOn){
           computeGroups();
           stepSlide();
         }
-
       }catch(e){
         statusText.textContent = "로딩 실패: " + (e.message || e);
       }
@@ -488,7 +484,6 @@ iframe{
       }
     });
 
-    // 최초 로드
     loadAndRender();
   </script>
 </body>
