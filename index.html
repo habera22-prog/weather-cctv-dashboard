@@ -13,12 +13,12 @@
       --border2:rgba(255,255,255,.16);
       --text:#fff;
       --muted:rgba(255,255,255,.65);
-
-      /* ✅ JS가 실제 header 높이로 계속 갱신함(초기 fallback) */
       --headerH:72px;
-
       --gap:10px;
       --radius:14px;
+
+      /* ✅ 슬라이드 확대 배율(기본 1.35) */
+      --slideScale: 1.35;
     }
 
     html, body { height:100%; }
@@ -27,15 +27,12 @@
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       background:var(--bg);
       color:var(--text);
-      overflow:hidden; /* ✅ 페이지 자체 스크롤 방지(관제센터 느낌) */
+      overflow:hidden;
     }
 
     header{
       position: sticky; top:0; z-index:100;
-
-      /* ✅ 핵심: height 고정 금지(버튼 줄바꿈 시 실제 높이가 변함) */
-      min-height: var(--headerH);
-
+      height: var(--headerH);
       display:flex; align-items:center; justify-content:space-between;
       gap:10px; flex-wrap:wrap;
 
@@ -62,7 +59,6 @@
     }
     .btn:hover{ border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.10); }
 
-    /* ✅ 관제센터 그리드(헤더 제외한 영역을 전부 사용) */
     .grid{
       height: calc(100vh - var(--headerH));
       padding: var(--gap);
@@ -72,17 +68,19 @@
       grid-template-columns: repeat(4, minmax(260px, 1fr));
       gap: var(--gap);
 
-      overflow:auto; /* ✅ 그리드 내부만 스크롤 */
-      scroll-behavior:smooth;
+      overflow-y:auto;
+      overflow-x:hidden;
+
+      grid-auto-rows: minmax(420px, auto);
+      align-items:start;
     }
     @media (max-width: 1200px){ .grid{ grid-template-columns: repeat(3, minmax(240px, 1fr)); } }
     @media (max-width: 900px) { .grid{ grid-template-columns: repeat(2, minmax(240px, 1fr)); } }
     @media (max-width: 520px) { .grid{ grid-template-columns: 1fr; } }
 
-    /* ✅ 슬라이드 모드(권역별 순환)일 때: 카드가 왼쪽에 쏠리지 않도록 중앙 정렬 + 크게 */
     .grid.slideMode{
-      grid-template-columns: minmax(260px, 980px); /* 한 칼럼으로 크게 */
-      justify-content: center;                    /* 가운데 정렬 */
+      grid-template-columns: minmax(260px, 980px);
+      justify-content: center;
       align-content: start;
     }
 
@@ -95,8 +93,6 @@
 
       display:flex;
       flex-direction:column;
-
-      /* ✅ “위에만 보여” 방지: 카드가 반드시 높이를 갖도록 */
       min-height: 240px;
     }
 
@@ -125,21 +121,29 @@
     }
     .pill:hover{ border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.10); }
 
-    /* ✅ iframe 영역: 세로 확보(4:3) */
     .frameWrap{
       position:relative;
       background:#111;
-
-      aspect-ratio: 4 / 3;   /* ✅ 세로 확보 */
+      aspect-ratio: 4 / 3;
       width:100%;
-      min-height: 260px;     /* ✅ 카드 헤더 때문에 잘리는 느낌 완화 */
+      min-height: 260px;
+      flex:none;
+
+      /* ✅ 확대 시 넘치는 부분 깔끔하게 */
+      overflow:hidden;
     }
     iframe{
-      position:absolute; inset:0; /* ✅ frameWrap을 꽉 채움 */
+      position:absolute; inset:0;
       width:100%;
       height:100%;
       border:0;
       background:#111;
+    }
+
+    /* ✅ 슬라이드 확대(토글 ON일 때만) */
+    .grid.slideMode.zoomOn iframe{
+      transform: scale(var(--slideScale));
+      transform-origin: 50% 0%;
     }
 
     .overlay{
@@ -187,7 +191,7 @@
 <body>
   <header>
     <div>
-      <div class="title">CCTV 모니터링 </div>
+      <div class="title">CCTV 모니터링</div>
       <div class="sub" id="statusText">데이터 로딩 중…</div>
     </div>
 
@@ -196,6 +200,10 @@
       <button class="btn" id="toggleAuto">자동 새로고침: OFF</button>
       <button class="btn" id="toggleSlide">슬라이드: OFF</button>
       <button class="btn" id="nextSlide">다음 권역</button>
+
+      <!-- ✅ NEW: 확대 토글 -->
+      <button class="btn" id="toggleZoom">확대: OFF</button>
+
       <span class="sub" id="autoInfo">권장: 5~10분</span>
     </div>
   </header>
@@ -204,7 +212,6 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    // ✅ 대표CCTV 웹 게시 CSV
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZZaK8GDz_FZsefh-XoCkPmQhKOugjSRNioC5M8fAUH87iiyQV8KK28wCVN4_dbWJukM-Rbwkkbz_G/pub?gid=1422576665&single=true&output=csv";
 
     const grid = document.getElementById("grid");
@@ -212,6 +219,7 @@
     const toggleAutoBtn = document.getElementById("toggleAuto");
     const toggleSlideBtn = document.getElementById("toggleSlide");
     const nextSlideBtn = document.getElementById("nextSlide");
+    const toggleZoomBtn = document.getElementById("toggleZoom"); // ✅ NEW
     const autoInfo = document.getElementById("autoInfo");
     const statusText = document.getElementById("statusText");
     const toast = document.getElementById("toast");
@@ -220,23 +228,14 @@
     let autoTimer = null;
     const AUTO_MIN = 5;
 
-    // ✅ 슬라이드(권역별 순환)
     let slideOn = false;
     let slideTimer = null;
-    const SLIDE_SEC = 5; // ✅ 권역당 5초
+    const SLIDE_SEC = 5;
     let slideGroups = [];
     let slideIdx = 0;
 
-    /* ==========================================================
-       ✅ 핵심 FIX: 실제 header 높이를 측정해 --headerH에 반영
-       (버튼이 줄바꿈되어 header가 커져도 영상/그리드가 안 잘림)
-    ========================================================== */
-    function syncHeaderHeight(){
-      const h = document.querySelector("header")?.offsetHeight || 72;
-      document.documentElement.style.setProperty("--headerH", h + "px");
-    }
-    window.addEventListener("load", syncHeaderHeight);
-    window.addEventListener("resize", syncHeaderHeight);
+    // ✅ NEW: zoom state (슬라이드에서만 적용)
+    let zoomOn = false;
 
     function showToast(msg){
       toast.textContent = msg;
@@ -267,11 +266,9 @@
           else inQ = !inQ;
           continue;
         }
-
         if (!inQ && ch === ","){
           row.push(cur); cur=""; continue;
         }
-
         if (!inQ && (ch === "\n" || ch === "\r")){
           if (ch === "\r" && next === "\n") i++;
           row.push(cur); cur="";
@@ -279,7 +276,6 @@
           row = [];
           continue;
         }
-
         cur += ch;
       }
       if (cur.length || row.length){
@@ -297,7 +293,6 @@
 
     function mapCsvToItems(rows){
       if (!rows || rows.length < 2) return [];
-
       const header = rows[0];
       const idx = {};
       header.forEach((h, i) => idx[normalizeHeaders(h)] = i);
@@ -326,6 +321,16 @@
       }
     }
 
+    function applyZoomClass(){
+      // ✅ 슬라이드 + zoomOn일 때만 적용
+      if (slideOn && zoomOn){
+        grid.classList.add("zoomOn");
+      }else{
+        grid.classList.remove("zoomOn");
+      }
+      toggleZoomBtn.textContent = "확대: " + (zoomOn ? "ON" : "OFF");
+    }
+
     function computeGroups(){
       const groups = new Set();
       document.querySelectorAll(".card").forEach(card => {
@@ -348,10 +353,8 @@
     function stepSlide(){
       if (!slideGroups.length) return;
       if (slideIdx >= slideGroups.length) slideIdx = 0;
-
       const g = slideGroups[slideIdx];
       showGroup(g);
-
       slideIdx = (slideIdx + 1) % slideGroups.length;
     }
 
@@ -370,6 +373,7 @@
           slideOn = false;
           toggleSlideBtn.textContent = "슬라이드: OFF";
           grid.classList.remove("slideMode");
+          applyZoomClass();
           return;
         }
         stepSlide();
@@ -378,9 +382,7 @@
         grid.classList.remove("slideMode");
         document.querySelectorAll(".card").forEach(card => card.style.display = "flex");
       }
-
-      // ✅ 슬라이드 토글로 헤더 줄바꿈/레이아웃 바뀔 수 있으니 재계산
-      syncHeaderHeight();
+      applyZoomClass(); // ✅ slide 상태 바뀔 때 반영
     }
 
     function buildCard(item, idx){
@@ -390,7 +392,7 @@
 
       const card = document.createElement("div");
       card.className = "card";
-      card.dataset.group = region; // ✅ 슬라이드 필터용(권역별)
+      card.dataset.group = region;
 
       card.innerHTML = `
         <div class="cardHead">
@@ -421,7 +423,9 @@
       `;
 
       card.querySelector('[data-action="reload"]')?.addEventListener("click", () => {
-        reloadFrame(card);
+        const iframe = card.querySelector("iframe");
+        if (!iframe) return;
+        iframe.src = withCacheBust(iframe.src);
       });
 
       card.querySelector('[data-action="hide"]')?.addEventListener("click", () => {
@@ -432,14 +436,10 @@
       return card;
     }
 
-    function reloadFrame(card){
-      const iframe = card.querySelector("iframe");
-      if (!iframe) return;
-      iframe.src = withCacheBust(iframe.src);
-    }
-
     function reloadAll(){
-      document.querySelectorAll(".card").forEach(card => reloadFrame(card));
+      document.querySelectorAll(".card iframe").forEach(iframe => {
+        iframe.src = withCacheBust(iframe.src);
+      });
       showToast("전체 리로드 완료");
     }
 
@@ -466,24 +466,17 @@
         statusText.textContent =
           `표시 ${items.length}개 · 마지막 로드: ${now.toLocaleString("ko-KR")} · (시트 수정 시 새로고침하면 반영)`;
 
-        // ✅ 슬라이드 ON이면 렌더 후에도 유지
         if (slideOn){
           computeGroups();
           stepSlide();
         }
-
+        applyZoomClass();
       }catch(e){
         statusText.textContent = "로딩 실패: " + (e.message || e);
-      }finally{
-        // ✅ 렌더/에러 여부와 관계없이, 헤더 실제 높이 반영(세로 잘림 방지)
-        syncHeaderHeight();
       }
     }
 
-    reloadAllBtn.addEventListener("click", () => {
-      reloadAll();
-      syncHeaderHeight();
-    });
+    reloadAllBtn.addEventListener("click", reloadAll);
 
     toggleAutoBtn.addEventListener("click", () => {
       autoOn = !autoOn;
@@ -499,8 +492,6 @@
       }else{
         showToast("자동 새로고침 OFF");
       }
-
-      syncHeaderHeight();
     });
 
     toggleSlideBtn.addEventListener("click", () => {
@@ -514,10 +505,15 @@
       }else{
         stepSlide();
       }
-      syncHeaderHeight();
     });
 
-    // 최초 로드
+    // ✅ NEW: 확대 토글
+    toggleZoomBtn.addEventListener("click", () => {
+      zoomOn = !zoomOn;
+      applyZoomClass();
+      showToast(zoomOn ? "확대 ON (슬라이드에서만)" : "확대 OFF");
+    });
+
     loadAndRender();
   </script>
 </body>
