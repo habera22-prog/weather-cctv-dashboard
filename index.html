@@ -339,10 +339,10 @@
       // ✅ iframe 차단은 JS로 완벽 판별이 어려움
       // 대신 “10초 후”까지 iframe이 아무것도 못 띄웠을 가능성이 있으면 안내 오버레이를 띄움(사용자 경험용)
       // 너무 불편하면 10초 -> 0으로 바꾸거나 아래 줄을 주석처리하면 됨.
-      setTimeout(() => {
-        const ov = document.getElementById("ov_" + idx);
-        if (ov) ov.classList.add("show");
-      }, 10000);
+      // setTimeout(() => {
+//   const ov = document.getElementById("ov_" + idx);
+//   if (ov) ov.classList.add("show");
+// }, 10000);
 
       return card;
     }
