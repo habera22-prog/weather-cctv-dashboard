@@ -176,6 +176,8 @@
     <div class="controls">
       <button class="btn" id="reloadAll">전체 리로드</button>
       <button class="btn" id="toggleAuto">자동 새로고침: OFF</button>
+      <button class="btn" id="toggleSlide">슬라이드: OFF</button>
+      <button class="btn" id="nextSlide">다음 권역</button>
       <span class="sub" id="autoInfo">권장: 5~10분</span>
     </div>
   </header>
@@ -190,6 +192,8 @@
     const grid = document.getElementById("grid");
     const reloadAllBtn = document.getElementById("reloadAll");
     const toggleAutoBtn = document.getElementById("toggleAuto");
+    const toggleSlideBtn = document.getElementById("toggleSlide");
+    const nextSlideBtn = document.getElementById("nextSlide");
     const autoInfo = document.getElementById("autoInfo");
     const statusText = document.getElementById("statusText");
     const toast = document.getElementById("toast");
@@ -197,6 +201,13 @@
     let autoOn = false;
     let autoTimer = null;
     const AUTO_MIN = 5; // 기본 5분
+
+    // ✅ 슬라이드(권역별 순환)
+    let slideOn = false;
+    let slideTimer = null;
+    const SLIDE_SEC = 5; // ✅ 권역당 5초
+    let slideGroups = [];
+    let slideIdx = 0;
 
     function showToast(msg){
       toast.textContent = msg;
@@ -289,6 +300,58 @@
       }
     }
 
+    // ✅ 슬라이드 그룹 구성/표시
+    function computeGroups(){
+      const groups = new Set();
+      document.querySelectorAll(".card").forEach(card => {
+        const g = (card.dataset.group || "").trim();
+        if (g) groups.add(g);
+      });
+      slideGroups = Array.from(groups);
+      slideIdx = 0;
+    }
+
+    function showGroup(group){
+      const cards = Array.from(document.querySelectorAll(".card"));
+      cards.forEach(card => {
+        card.style.display = (card.dataset.group === group) ? "flex" : "none";
+      });
+      grid.scrollTop = 0;
+      showToast(`슬라이드: ${group} (${Math.min(slideIdx+1, slideGroups.length)}/${slideGroups.length})`);
+    }
+
+    function stepSlide(){
+      if (!slideGroups.length) return;
+      if (slideIdx >= slideGroups.length) slideIdx = 0;
+
+      const g = slideGroups[slideIdx];
+      showGroup(g);
+
+      slideIdx = (slideIdx + 1) % slideGroups.length;
+    }
+
+    function setSlide(on){
+      slideOn = on;
+      toggleSlideBtn.textContent = "슬라이드: " + (slideOn ? "ON" : "OFF");
+
+      if (slideTimer) clearInterval(slideTimer);
+      slideTimer = null;
+
+      if (slideOn){
+        computeGroups();
+        if (!slideGroups.length){
+          showToast("슬라이드: 권역 데이터 없음");
+          slideOn = false;
+          toggleSlideBtn.textContent = "슬라이드: OFF";
+          return;
+        }
+        stepSlide(); // 즉시 1회
+        slideTimer = setInterval(stepSlide, SLIDE_SEC * 1000);
+      }else{
+        document.querySelectorAll(".card").forEach(card => card.style.display = "flex");
+      }
+    }
+
     function buildCard(item, idx){
       const region = item.region || "-";
       const note = item.note || "";
@@ -296,6 +359,7 @@
 
       const card = document.createElement("div");
       card.className = "card";
+      card.dataset.group = region; // ✅ 슬라이드 필터용(권역명)
 
       card.innerHTML = `
         <div class="cardHead">
@@ -330,20 +394,13 @@
         reloadFrame(card);
       });
 
-      // 오버레이 닫기
+      // 오버레이 닫기(수동용)
       card.querySelector('[data-action="hide"]')?.addEventListener("click", () => {
         const ov = card.querySelector(".overlay");
         if (ov) ov.classList.remove("show");
       });
 
-      // ✅ iframe 차단은 JS로 완벽 판별이 어려움
-      // 대신 “10초 후”까지 iframe이 아무것도 못 띄웠을 가능성이 있으면 안내 오버레이를 띄움(사용자 경험용)
-      // 너무 불편하면 10초 -> 0으로 바꾸거나 아래 줄을 주석처리하면 됨.
-      // setTimeout(() => {
-//   const ov = document.getElementById("ov_" + idx);
-//   if (ov) ov.classList.add("show");
-// }, 10000);
-
+      // ✅ 자동 오버레이 표시는 제거(요청 반영)
       return card;
     }
 
@@ -381,6 +438,12 @@
         statusText.textContent =
           `표시 ${items.length}개 · 마지막 로드: ${now.toLocaleString("ko-KR")} · (시트 수정 시 새로고침하면 반영)`;
 
+        // ✅ 슬라이드가 켜져 있으면, 새로 렌더링 후에도 슬라이드 상태 유지
+        if (slideOn){
+          computeGroups();
+          stepSlide();
+        }
+
       }catch(e){
         statusText.textContent = "로딩 실패: " + (e.message || e);
       }
@@ -402,6 +465,19 @@
         showToast("자동 새로고침 ON");
       }else{
         showToast("자동 새로고침 OFF");
+      }
+    });
+
+    toggleSlideBtn.addEventListener("click", () => {
+      setSlide(!slideOn);
+      showToast(slideOn ? "슬라이드 ON" : "슬라이드 OFF");
+    });
+
+    nextSlideBtn.addEventListener("click", () => {
+      if (!slideOn){
+        setSlide(true);
+      }else{
+        stepSlide();
       }
     });
 
