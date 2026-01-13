@@ -13,7 +13,10 @@
       --border2:rgba(255,255,255,.16);
       --text:#fff;
       --muted:rgba(255,255,255,.65);
+
+      /* ✅ JS가 실제 header 높이로 계속 갱신함(초기 fallback) */
       --headerH:72px;
+
       --gap:10px;
       --radius:14px;
     }
@@ -24,12 +27,15 @@
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       background:var(--bg);
       color:var(--text);
-      overflow:hidden; /* ✅ 페이지 자체 스크롤 방지 */
+      overflow:hidden; /* ✅ 페이지 자체 스크롤 방지(관제센터 느낌) */
     }
 
     header{
       position: sticky; top:0; z-index:100;
-      height: var(--headerH);
+
+      /* ✅ 핵심: height 고정 금지(버튼 줄바꿈 시 실제 높이가 변함) */
+      min-height: var(--headerH);
+
       display:flex; align-items:center; justify-content:space-between;
       gap:10px; flex-wrap:wrap;
 
@@ -56,7 +62,7 @@
     }
     .btn:hover{ border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.10); }
 
-    /* ✅ 관제센터 그리드 */
+    /* ✅ 관제센터 그리드(헤더 제외한 영역을 전부 사용) */
     .grid{
       height: calc(100vh - var(--headerH));
       padding: var(--gap);
@@ -66,7 +72,8 @@
       grid-template-columns: repeat(4, minmax(260px, 1fr));
       gap: var(--gap);
 
-      overflow:auto; /* ✅ 그리드 내부만 스크롤 (자동 스크롤도 여기 scrollTop 사용) */
+      overflow:auto; /* ✅ 그리드 내부만 스크롤 */
+      scroll-behavior:smooth;
     }
     @media (max-width: 1200px){ .grid{ grid-template-columns: repeat(3, minmax(240px, 1fr)); } }
     @media (max-width: 900px) { .grid{ grid-template-columns: repeat(2, minmax(240px, 1fr)); } }
@@ -74,8 +81,8 @@
 
     /* ✅ 슬라이드 모드(권역별 순환)일 때: 카드가 왼쪽에 쏠리지 않도록 중앙 정렬 + 크게 */
     .grid.slideMode{
-      grid-template-columns: minmax(260px, 980px);
-      justify-content: center;
+      grid-template-columns: minmax(260px, 980px); /* 한 칼럼으로 크게 */
+      justify-content: center;                    /* 가운데 정렬 */
       align-content: start;
     }
 
@@ -88,6 +95,8 @@
 
       display:flex;
       flex-direction:column;
+
+      /* ✅ “위에만 보여” 방지: 카드가 반드시 높이를 갖도록 */
       min-height: 240px;
     }
 
@@ -116,16 +125,17 @@
     }
     .pill:hover{ border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.10); }
 
+    /* ✅ iframe 영역: 세로 확보(4:3) */
     .frameWrap{
       position:relative;
       background:#111;
 
       aspect-ratio: 4 / 3;   /* ✅ 세로 확보 */
       width:100%;
-      min-height: 260px;
+      min-height: 260px;     /* ✅ 카드 헤더 때문에 잘리는 느낌 완화 */
     }
     iframe{
-      position:absolute; inset:0;
+      position:absolute; inset:0; /* ✅ frameWrap을 꽉 채움 */
       width:100%;
       height:100%;
       border:0;
@@ -184,13 +194,8 @@
     <div class="controls">
       <button class="btn" id="reloadAll">전체 리로드</button>
       <button class="btn" id="toggleAuto">자동 새로고침: OFF</button>
-
-      <!-- ✅ 자동 스크롤(왕복) 추가 -->
-      <button class="btn" id="toggleScroll">자동 스크롤: OFF</button>
-
       <button class="btn" id="toggleSlide">슬라이드: OFF</button>
       <button class="btn" id="nextSlide">다음 권역</button>
-
       <span class="sub" id="autoInfo">권장: 5~10분</span>
     </div>
   </header>
@@ -205,7 +210,6 @@
     const grid = document.getElementById("grid");
     const reloadAllBtn = document.getElementById("reloadAll");
     const toggleAutoBtn = document.getElementById("toggleAuto");
-    const toggleScrollBtn = document.getElementById("toggleScroll");
     const toggleSlideBtn = document.getElementById("toggleSlide");
     const nextSlideBtn = document.getElementById("nextSlide");
     const autoInfo = document.getElementById("autoInfo");
@@ -219,16 +223,20 @@
     // ✅ 슬라이드(권역별 순환)
     let slideOn = false;
     let slideTimer = null;
-    const SLIDE_SEC = 5; // 권역당 5초
+    const SLIDE_SEC = 5; // ✅ 권역당 5초
     let slideGroups = [];
     let slideIdx = 0;
 
-    // ✅ 자동 스크롤(왕복)
-    let autoScrollOn = false;
-    let autoScrollRaf = null;
-    let scrollDir = 1;              // 1=down, -1=up
-    const SCROLL_PX_PER_SEC = 120;  // ✅ 속도(원하면 60~200)
-    let lastTs = 0;
+    /* ==========================================================
+       ✅ 핵심 FIX: 실제 header 높이를 측정해 --headerH에 반영
+       (버튼이 줄바꿈되어 header가 커져도 영상/그리드가 안 잘림)
+    ========================================================== */
+    function syncHeaderHeight(){
+      const h = document.querySelector("header")?.offsetHeight || 72;
+      document.documentElement.style.setProperty("--headerH", h + "px");
+    }
+    window.addEventListener("load", syncHeaderHeight);
+    window.addEventListener("resize", syncHeaderHeight);
 
     function showToast(msg){
       toast.textContent = msg;
@@ -354,9 +362,6 @@
       if (slideTimer) clearInterval(slideTimer);
       slideTimer = null;
 
-      // ✅ 슬라이드 켜면 자동스크롤은 OFF (충돌 방지)
-      if (slideOn && autoScrollOn) setAutoScroll(false);
-
       if (slideOn){
         grid.classList.add("slideMode");
         computeGroups();
@@ -373,6 +378,9 @@
         grid.classList.remove("slideMode");
         document.querySelectorAll(".card").forEach(card => card.style.display = "flex");
       }
+
+      // ✅ 슬라이드 토글로 헤더 줄바꿈/레이아웃 바뀔 수 있으니 재계산
+      syncHeaderHeight();
     }
 
     function buildCard(item, idx){
@@ -382,7 +390,7 @@
 
       const card = document.createElement("div");
       card.className = "card";
-      card.dataset.group = region; // ✅ 슬라이드 필터용
+      card.dataset.group = region; // ✅ 슬라이드 필터용(권역별)
 
       card.innerHTML = `
         <div class="cardHead">
@@ -435,57 +443,6 @@
       showToast("전체 리로드 완료");
     }
 
-    // =========================
-    // ✅ 자동 스크롤(왕복) 로직
-    // =========================
-    function autoScrollLoop(ts){
-      if (!autoScrollOn) return;
-      if (!lastTs) lastTs = ts;
-
-      const dt = (ts - lastTs) / 1000;
-      lastTs = ts;
-
-      const max = grid.scrollHeight - grid.clientHeight;
-      if (max <= 0){
-        setAutoScroll(false);
-        return;
-      }
-
-      grid.scrollTop += scrollDir * SCROLL_PX_PER_SEC * dt;
-
-      // 바닥/천장 닿으면 방향 전환
-      if (grid.scrollTop >= max - 1){
-        grid.scrollTop = max;
-        scrollDir = -1;
-      }else if (grid.scrollTop <= 1){
-        grid.scrollTop = 0;
-        scrollDir = 1;
-      }
-
-      autoScrollRaf = requestAnimationFrame(autoScrollLoop);
-    }
-
-    function setAutoScroll(on){
-      autoScrollOn = on;
-      toggleScrollBtn.textContent = "자동 스크롤: " + (autoScrollOn ? "ON" : "OFF");
-
-      if (autoScrollRaf) cancelAnimationFrame(autoScrollRaf);
-      autoScrollRaf = null;
-      lastTs = 0;
-
-      // ✅ 자동스크롤 켜면 슬라이드는 OFF (충돌 방지)
-      if (autoScrollOn && slideOn) setSlide(false);
-
-      if (autoScrollOn){
-        scrollDir = 1;
-        autoScrollRaf = requestAnimationFrame(autoScrollLoop);
-        showToast("자동 스크롤 ON");
-      }else{
-        showToast("자동 스크롤 OFF");
-      }
-    }
-    // =========================
-
     async function loadAndRender(){
       grid.innerHTML = "";
       statusText.textContent = "CSV 로딩 중…";
@@ -517,11 +474,16 @@
 
       }catch(e){
         statusText.textContent = "로딩 실패: " + (e.message || e);
+      }finally{
+        // ✅ 렌더/에러 여부와 관계없이, 헤더 실제 높이 반영(세로 잘림 방지)
+        syncHeaderHeight();
       }
     }
 
-    // 버튼 바인딩
-    reloadAllBtn.addEventListener("click", reloadAll);
+    reloadAllBtn.addEventListener("click", () => {
+      reloadAll();
+      syncHeaderHeight();
+    });
 
     toggleAutoBtn.addEventListener("click", () => {
       autoOn = !autoOn;
@@ -537,10 +499,8 @@
       }else{
         showToast("자동 새로고침 OFF");
       }
-    });
 
-    toggleScrollBtn.addEventListener("click", () => {
-      setAutoScroll(!autoScrollOn);
+      syncHeaderHeight();
     });
 
     toggleSlideBtn.addEventListener("click", () => {
@@ -554,6 +514,7 @@
       }else{
         stepSlide();
       }
+      syncHeaderHeight();
     });
 
     // 최초 로드
