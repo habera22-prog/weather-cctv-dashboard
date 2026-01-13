@@ -118,11 +118,14 @@
     }
     .pill:hover{ border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.10); }
 
-   .frameWrap{
+.frameWrap{
   position:relative;
   background:#111;
-  aspect-ratio: 16 / 9;   /* ✅ 핵심 */
+
+  aspect-ratio: 4 / 3;   /* ✅ 핵심: 세로 확보 */
   width:100%;
+
+  min-height: 260px;     /* ✅ 선택: 제목/버튼 때문에 잘리는 느낌 방지 */
 }
 iframe{
   position:absolute; inset:0; /* ✅ frameWrap을 꽉 채움 */
