@@ -16,9 +16,6 @@
       --headerH:72px;
       --gap:10px;
       --radius:14px;
-
-      /* ✅ 슬라이드 확대 배율(기본 1.35) */
-      --slideScale: 1.35;
     }
 
     html, body { height:100%; }
@@ -27,7 +24,7 @@
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       background:var(--bg);
       color:var(--text);
-      overflow:hidden;
+      overflow:hidden; /* ✅ 페이지 자체 스크롤 방지 */
     }
 
     header{
@@ -59,6 +56,7 @@
     }
     .btn:hover{ border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.10); }
 
+    /* ✅ 관제센터 그리드 */
     .grid{
       height: calc(100vh - var(--headerH));
       padding: var(--gap);
@@ -68,16 +66,13 @@
       grid-template-columns: repeat(4, minmax(260px, 1fr));
       gap: var(--gap);
 
-      overflow-y:auto;
-      overflow-x:hidden;
-
-      grid-auto-rows: minmax(420px, auto);
-      align-items:start;
+      overflow:auto; /* ✅ 그리드 내부만 스크롤 (자동 스크롤도 여기 scrollTop 사용) */
     }
     @media (max-width: 1200px){ .grid{ grid-template-columns: repeat(3, minmax(240px, 1fr)); } }
     @media (max-width: 900px) { .grid{ grid-template-columns: repeat(2, minmax(240px, 1fr)); } }
     @media (max-width: 520px) { .grid{ grid-template-columns: 1fr; } }
 
+    /* ✅ 슬라이드 모드(권역별 순환)일 때: 카드가 왼쪽에 쏠리지 않도록 중앙 정렬 + 크게 */
     .grid.slideMode{
       grid-template-columns: minmax(260px, 980px);
       justify-content: center;
@@ -124,13 +119,10 @@
     .frameWrap{
       position:relative;
       background:#111;
-      aspect-ratio: 4 / 3;
+
+      aspect-ratio: 4 / 3;   /* ✅ 세로 확보 */
       width:100%;
       min-height: 260px;
-      flex:none;
-
-      /* ✅ 확대 시 넘치는 부분 깔끔하게 */
-      overflow:hidden;
     }
     iframe{
       position:absolute; inset:0;
@@ -138,12 +130,6 @@
       height:100%;
       border:0;
       background:#111;
-    }
-
-    /* ✅ 슬라이드 확대(토글 ON일 때만) */
-    .grid.slideMode.zoomOn iframe{
-      transform: scale(var(--slideScale));
-      transform-origin: 50% 0%;
     }
 
     .overlay{
@@ -191,18 +177,19 @@
 <body>
   <header>
     <div>
-      <div class="title">CCTV 모니터링</div>
+      <div class="title">CCTV 모니터링 </div>
       <div class="sub" id="statusText">데이터 로딩 중…</div>
     </div>
 
     <div class="controls">
       <button class="btn" id="reloadAll">전체 리로드</button>
       <button class="btn" id="toggleAuto">자동 새로고침: OFF</button>
+
+      <!-- ✅ 자동 스크롤(왕복) 추가 -->
+      <button class="btn" id="toggleScroll">자동 스크롤: OFF</button>
+
       <button class="btn" id="toggleSlide">슬라이드: OFF</button>
       <button class="btn" id="nextSlide">다음 권역</button>
-
-      <!-- ✅ NEW: 확대 토글 -->
-      <button class="btn" id="toggleZoom">확대: OFF</button>
 
       <span class="sub" id="autoInfo">권장: 5~10분</span>
     </div>
@@ -212,14 +199,15 @@
   <div class="toast" id="toast"></div>
 
   <script>
+    // ✅ 대표CCTV 웹 게시 CSV
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZZaK8GDz_FZsefh-XoCkPmQhKOugjSRNioC5M8fAUH87iiyQV8KK28wCVN4_dbWJukM-Rbwkkbz_G/pub?gid=1422576665&single=true&output=csv";
 
     const grid = document.getElementById("grid");
     const reloadAllBtn = document.getElementById("reloadAll");
     const toggleAutoBtn = document.getElementById("toggleAuto");
+    const toggleScrollBtn = document.getElementById("toggleScroll");
     const toggleSlideBtn = document.getElementById("toggleSlide");
     const nextSlideBtn = document.getElementById("nextSlide");
-    const toggleZoomBtn = document.getElementById("toggleZoom"); // ✅ NEW
     const autoInfo = document.getElementById("autoInfo");
     const statusText = document.getElementById("statusText");
     const toast = document.getElementById("toast");
@@ -228,14 +216,19 @@
     let autoTimer = null;
     const AUTO_MIN = 5;
 
+    // ✅ 슬라이드(권역별 순환)
     let slideOn = false;
     let slideTimer = null;
-    const SLIDE_SEC = 5;
+    const SLIDE_SEC = 5; // 권역당 5초
     let slideGroups = [];
     let slideIdx = 0;
 
-    // ✅ NEW: zoom state (슬라이드에서만 적용)
-    let zoomOn = false;
+    // ✅ 자동 스크롤(왕복)
+    let autoScrollOn = false;
+    let autoScrollRaf = null;
+    let scrollDir = 1;              // 1=down, -1=up
+    const SCROLL_PX_PER_SEC = 120;  // ✅ 속도(원하면 60~200)
+    let lastTs = 0;
 
     function showToast(msg){
       toast.textContent = msg;
@@ -266,9 +259,11 @@
           else inQ = !inQ;
           continue;
         }
+
         if (!inQ && ch === ","){
           row.push(cur); cur=""; continue;
         }
+
         if (!inQ && (ch === "\n" || ch === "\r")){
           if (ch === "\r" && next === "\n") i++;
           row.push(cur); cur="";
@@ -276,6 +271,7 @@
           row = [];
           continue;
         }
+
         cur += ch;
       }
       if (cur.length || row.length){
@@ -293,6 +289,7 @@
 
     function mapCsvToItems(rows){
       if (!rows || rows.length < 2) return [];
+
       const header = rows[0];
       const idx = {};
       header.forEach((h, i) => idx[normalizeHeaders(h)] = i);
@@ -321,16 +318,6 @@
       }
     }
 
-    function applyZoomClass(){
-      // ✅ 슬라이드 + zoomOn일 때만 적용
-      if (slideOn && zoomOn){
-        grid.classList.add("zoomOn");
-      }else{
-        grid.classList.remove("zoomOn");
-      }
-      toggleZoomBtn.textContent = "확대: " + (zoomOn ? "ON" : "OFF");
-    }
-
     function computeGroups(){
       const groups = new Set();
       document.querySelectorAll(".card").forEach(card => {
@@ -353,8 +340,10 @@
     function stepSlide(){
       if (!slideGroups.length) return;
       if (slideIdx >= slideGroups.length) slideIdx = 0;
+
       const g = slideGroups[slideIdx];
       showGroup(g);
+
       slideIdx = (slideIdx + 1) % slideGroups.length;
     }
 
@@ -365,6 +354,9 @@
       if (slideTimer) clearInterval(slideTimer);
       slideTimer = null;
 
+      // ✅ 슬라이드 켜면 자동스크롤은 OFF (충돌 방지)
+      if (slideOn && autoScrollOn) setAutoScroll(false);
+
       if (slideOn){
         grid.classList.add("slideMode");
         computeGroups();
@@ -373,7 +365,6 @@
           slideOn = false;
           toggleSlideBtn.textContent = "슬라이드: OFF";
           grid.classList.remove("slideMode");
-          applyZoomClass();
           return;
         }
         stepSlide();
@@ -382,7 +373,6 @@
         grid.classList.remove("slideMode");
         document.querySelectorAll(".card").forEach(card => card.style.display = "flex");
       }
-      applyZoomClass(); // ✅ slide 상태 바뀔 때 반영
     }
 
     function buildCard(item, idx){
@@ -392,7 +382,7 @@
 
       const card = document.createElement("div");
       card.className = "card";
-      card.dataset.group = region;
+      card.dataset.group = region; // ✅ 슬라이드 필터용
 
       card.innerHTML = `
         <div class="cardHead">
@@ -423,9 +413,7 @@
       `;
 
       card.querySelector('[data-action="reload"]')?.addEventListener("click", () => {
-        const iframe = card.querySelector("iframe");
-        if (!iframe) return;
-        iframe.src = withCacheBust(iframe.src);
+        reloadFrame(card);
       });
 
       card.querySelector('[data-action="hide"]')?.addEventListener("click", () => {
@@ -436,12 +424,67 @@
       return card;
     }
 
+    function reloadFrame(card){
+      const iframe = card.querySelector("iframe");
+      if (!iframe) return;
+      iframe.src = withCacheBust(iframe.src);
+    }
+
     function reloadAll(){
-      document.querySelectorAll(".card iframe").forEach(iframe => {
-        iframe.src = withCacheBust(iframe.src);
-      });
+      document.querySelectorAll(".card").forEach(card => reloadFrame(card));
       showToast("전체 리로드 완료");
     }
+
+    // =========================
+    // ✅ 자동 스크롤(왕복) 로직
+    // =========================
+    function autoScrollLoop(ts){
+      if (!autoScrollOn) return;
+      if (!lastTs) lastTs = ts;
+
+      const dt = (ts - lastTs) / 1000;
+      lastTs = ts;
+
+      const max = grid.scrollHeight - grid.clientHeight;
+      if (max <= 0){
+        setAutoScroll(false);
+        return;
+      }
+
+      grid.scrollTop += scrollDir * SCROLL_PX_PER_SEC * dt;
+
+      // 바닥/천장 닿으면 방향 전환
+      if (grid.scrollTop >= max - 1){
+        grid.scrollTop = max;
+        scrollDir = -1;
+      }else if (grid.scrollTop <= 1){
+        grid.scrollTop = 0;
+        scrollDir = 1;
+      }
+
+      autoScrollRaf = requestAnimationFrame(autoScrollLoop);
+    }
+
+    function setAutoScroll(on){
+      autoScrollOn = on;
+      toggleScrollBtn.textContent = "자동 스크롤: " + (autoScrollOn ? "ON" : "OFF");
+
+      if (autoScrollRaf) cancelAnimationFrame(autoScrollRaf);
+      autoScrollRaf = null;
+      lastTs = 0;
+
+      // ✅ 자동스크롤 켜면 슬라이드는 OFF (충돌 방지)
+      if (autoScrollOn && slideOn) setSlide(false);
+
+      if (autoScrollOn){
+        scrollDir = 1;
+        autoScrollRaf = requestAnimationFrame(autoScrollLoop);
+        showToast("자동 스크롤 ON");
+      }else{
+        showToast("자동 스크롤 OFF");
+      }
+    }
+    // =========================
 
     async function loadAndRender(){
       grid.innerHTML = "";
@@ -466,16 +509,18 @@
         statusText.textContent =
           `표시 ${items.length}개 · 마지막 로드: ${now.toLocaleString("ko-KR")} · (시트 수정 시 새로고침하면 반영)`;
 
+        // ✅ 슬라이드 ON이면 렌더 후에도 유지
         if (slideOn){
           computeGroups();
           stepSlide();
         }
-        applyZoomClass();
+
       }catch(e){
         statusText.textContent = "로딩 실패: " + (e.message || e);
       }
     }
 
+    // 버튼 바인딩
     reloadAllBtn.addEventListener("click", reloadAll);
 
     toggleAutoBtn.addEventListener("click", () => {
@@ -494,6 +539,10 @@
       }
     });
 
+    toggleScrollBtn.addEventListener("click", () => {
+      setAutoScroll(!autoScrollOn);
+    });
+
     toggleSlideBtn.addEventListener("click", () => {
       setSlide(!slideOn);
       showToast(slideOn ? "슬라이드 ON" : "슬라이드 OFF");
@@ -507,13 +556,7 @@
       }
     });
 
-    // ✅ NEW: 확대 토글
-    toggleZoomBtn.addEventListener("click", () => {
-      zoomOn = !zoomOn;
-      applyZoomClass();
-      showToast(zoomOn ? "확대 ON (슬라이드에서만)" : "확대 OFF");
-    });
-
+    // 최초 로드
     loadAndRender();
   </script>
 </body>
