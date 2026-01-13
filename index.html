@@ -16,6 +16,9 @@
       --headerH:72px;
       --gap:10px;
       --radius:14px;
+
+      /* ✅ 슬라이드 확대 배율(기본 1.35) */
+      --slideScale: 1.35;
     }
 
     html, body { height:100%; }
@@ -24,7 +27,7 @@
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       background:var(--bg);
       color:var(--text);
-      overflow:hidden; /* ✅ 페이지 자체 스크롤 방지(관제센터 느낌) */
+      overflow:hidden;
     }
 
     header{
@@ -56,20 +59,18 @@
     }
     .btn:hover{ border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.10); }
 
-    /* ✅ 관제센터 그리드(헤더 제외한 영역을 전부 사용) */
     .grid{
       height: calc(100vh - var(--headerH));
       padding: var(--gap);
       box-sizing:border-box;
 
       display:grid;
-      grid-template-columns: repeat(4, minmax(260px, 1fr)); /* ✅ 4열 유지 */
+      grid-template-columns: repeat(4, minmax(260px, 1fr));
       gap: var(--gap);
 
-      overflow-y:auto;   /* ✅ 스크롤 허용(요청) */
+      overflow-y:auto;
       overflow-x:hidden;
 
-      /* ✅ 행(카드) 최소 높이 확보 → 영상 세로 확보 체감 */
       grid-auto-rows: minmax(420px, auto);
       align-items:start;
     }
@@ -77,10 +78,9 @@
     @media (max-width: 900px) { .grid{ grid-template-columns: repeat(2, minmax(240px, 1fr)); } }
     @media (max-width: 520px) { .grid{ grid-template-columns: 1fr; } }
 
-    /* ✅ 슬라이드 모드(권역별 순환)일 때: 카드가 왼쪽에 쏠리지 않도록 중앙 정렬 + 크게 */
     .grid.slideMode{
-      grid-template-columns: minmax(260px, 980px); /* 한 칼럼으로 크게 */
-      justify-content: center;                    /* 가운데 정렬 */
+      grid-template-columns: minmax(260px, 980px);
+      justify-content: center;
       align-content: start;
     }
 
@@ -93,8 +93,6 @@
 
       display:flex;
       flex-direction:column;
-
-      /* ✅ 카드 최소 높이(그리드 auto-rows가 더 강하게 잡아줌) */
       min-height: 240px;
     }
 
@@ -126,12 +124,13 @@
     .frameWrap{
       position:relative;
       background:#111;
-
-      aspect-ratio: 4 / 3;   /* ✅ 4:3 */
+      aspect-ratio: 4 / 3;
       width:100%;
       min-height: 260px;
+      flex:none;
 
-      flex:none;             /* ✅ 비율이 “진짜” 먹도록 (중요) */
+      /* ✅ 확대 시 넘치는 부분 깔끔하게 */
+      overflow:hidden;
     }
     iframe{
       position:absolute; inset:0;
@@ -139,6 +138,12 @@
       height:100%;
       border:0;
       background:#111;
+    }
+
+    /* ✅ 슬라이드 확대(토글 ON일 때만) */
+    .grid.slideMode.zoomOn iframe{
+      transform: scale(var(--slideScale));
+      transform-origin: 50% 0%;
     }
 
     .overlay{
@@ -186,7 +191,7 @@
 <body>
   <header>
     <div>
-      <div class="title">CCTV 모니터링 </div>
+      <div class="title">CCTV 모니터링</div>
       <div class="sub" id="statusText">데이터 로딩 중…</div>
     </div>
 
@@ -195,6 +200,10 @@
       <button class="btn" id="toggleAuto">자동 새로고침: OFF</button>
       <button class="btn" id="toggleSlide">슬라이드: OFF</button>
       <button class="btn" id="nextSlide">다음 권역</button>
+
+      <!-- ✅ NEW: 확대 토글 -->
+      <button class="btn" id="toggleZoom">확대: OFF</button>
+
       <span class="sub" id="autoInfo">권장: 5~10분</span>
     </div>
   </header>
@@ -210,6 +219,7 @@
     const toggleAutoBtn = document.getElementById("toggleAuto");
     const toggleSlideBtn = document.getElementById("toggleSlide");
     const nextSlideBtn = document.getElementById("nextSlide");
+    const toggleZoomBtn = document.getElementById("toggleZoom"); // ✅ NEW
     const autoInfo = document.getElementById("autoInfo");
     const statusText = document.getElementById("statusText");
     const toast = document.getElementById("toast");
@@ -223,6 +233,9 @@
     const SLIDE_SEC = 5;
     let slideGroups = [];
     let slideIdx = 0;
+
+    // ✅ NEW: zoom state (슬라이드에서만 적용)
+    let zoomOn = false;
 
     function showToast(msg){
       toast.textContent = msg;
@@ -253,11 +266,9 @@
           else inQ = !inQ;
           continue;
         }
-
         if (!inQ && ch === ","){
           row.push(cur); cur=""; continue;
         }
-
         if (!inQ && (ch === "\n" || ch === "\r")){
           if (ch === "\r" && next === "\n") i++;
           row.push(cur); cur="";
@@ -282,7 +293,6 @@
 
     function mapCsvToItems(rows){
       if (!rows || rows.length < 2) return [];
-
       const header = rows[0];
       const idx = {};
       header.forEach((h, i) => idx[normalizeHeaders(h)] = i);
@@ -309,6 +319,16 @@
       }catch(e){
         return url + (url.includes("?") ? "&" : "?") + "_t=" + Date.now();
       }
+    }
+
+    function applyZoomClass(){
+      // ✅ 슬라이드 + zoomOn일 때만 적용
+      if (slideOn && zoomOn){
+        grid.classList.add("zoomOn");
+      }else{
+        grid.classList.remove("zoomOn");
+      }
+      toggleZoomBtn.textContent = "확대: " + (zoomOn ? "ON" : "OFF");
     }
 
     function computeGroups(){
@@ -353,6 +373,7 @@
           slideOn = false;
           toggleSlideBtn.textContent = "슬라이드: OFF";
           grid.classList.remove("slideMode");
+          applyZoomClass();
           return;
         }
         stepSlide();
@@ -361,6 +382,7 @@
         grid.classList.remove("slideMode");
         document.querySelectorAll(".card").forEach(card => card.style.display = "flex");
       }
+      applyZoomClass(); // ✅ slide 상태 바뀔 때 반영
     }
 
     function buildCard(item, idx){
@@ -448,6 +470,7 @@
           computeGroups();
           stepSlide();
         }
+        applyZoomClass();
       }catch(e){
         statusText.textContent = "로딩 실패: " + (e.message || e);
       }
@@ -482,6 +505,13 @@
       }else{
         stepSlide();
       }
+    });
+
+    // ✅ NEW: 확대 토글
+    toggleZoomBtn.addEventListener("click", () => {
+      zoomOn = !zoomOn;
+      applyZoomClass();
+      showToast(zoomOn ? "확대 ON (슬라이드에서만)" : "확대 OFF");
     });
 
     loadAndRender();
