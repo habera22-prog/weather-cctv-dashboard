@@ -24,7 +24,7 @@
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       background:var(--bg);
       color:var(--text);
-      overflow:hidden; /* 페이지 자체 스크롤 방지 */
+      overflow:hidden; /* 페이지 자체 스크롤 방지(PC 관제 느낌 유지) */
     }
 
     header{
@@ -56,7 +56,7 @@
     }
     .btn:hover{ border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.10); }
 
-    /* ✅ 관제 그리드: "페이지 단위" 표시이므로 스크롤을 없애고, 화면에 딱 맞게 */
+    /* ✅ 관제 그리드: 기본은 "페이지 단위" → PC는 스크롤 숨김 */
     .grid{
       height: calc(100vh - var(--headerH));
       padding: var(--gap);
@@ -66,13 +66,27 @@
       grid-template-columns: repeat(4, minmax(260px, 1fr)); /* 4열 유지 */
       gap: var(--gap);
 
-      overflow:hidden; /* ✅ 페이지 스크롤 X (넘김으로만 이동) */
+      overflow:hidden; /* ✅ PC 관제: 스크롤 X (넘김으로만) */
       grid-auto-rows: minmax(420px, auto);
       align-items:start;
     }
     @media (max-width: 1200px){ .grid{ grid-template-columns: repeat(3, minmax(240px, 1fr)); } }
     @media (max-width: 900px) { .grid{ grid-template-columns: repeat(2, minmax(240px, 1fr)); } }
     @media (max-width: 520px) { .grid{ grid-template-columns: 1fr; } }
+
+    /* ✅✅ [추가] 모바일/작은 화면에서는 grid 스크롤 허용 (아래 카드 확인 가능) */
+    @media (max-width: 900px){
+      .grid{
+        overflow-y: auto;                 /* ✅ 스크롤 ON */
+        -webkit-overflow-scrolling: touch;/* ✅ iOS 부드러운 스크롤 */
+        overscroll-behavior: contain;
+      }
+    }
+
+    /* ✅✅ [추가] 모바일 주소창 때문에 vh가 들쭉날쭉한 문제 보정 */
+    @supports (height: 100dvh){
+      .grid{ height: calc(100dvh - var(--headerH)); }
+    }
 
     .card{
       background: var(--panel);
@@ -166,7 +180,7 @@
     }
     .toast.show{ opacity:1; }
 
-    /* ✅ 페이지 전환 감성(관제 느낌): 살짝 페이드 */
+    /* 페이지 전환 감성(관제 느낌): 살짝 페이드 */
     .grid.fadeOut{ opacity:.18; transition: opacity .18s ease; }
     .grid.fadeIn{ opacity:1; transition: opacity .18s ease; }
   </style>
@@ -375,7 +389,7 @@
     let allItems = [];
     let page = 0;
 
-    // 기본값(요청: 관제처럼 "페이지 단위로 넘기기")
+    // 기본값
     let perPage = 8;          // 한 페이지당 카드 수
     let pageAutoOn = false;   // 자동 넘김
     let pageSec = 10;         // 자동 넘김 간격(초)
@@ -383,6 +397,11 @@
 
     // 페이지 이동 시, 현재 페이지 iframe만 리로드할지(옵션)
     let reloadOnPage = false;
+
+    // ✅✅ [추가] 모바일/작은 화면에서는 기본 페이지당 개수 축소(스크롤도 가능하지만 가독성↑)
+    if (window.matchMedia("(max-width: 900px)").matches) {
+      perPage = 4;
+    }
 
     function totalPages(){
       return Math.max(1, Math.ceil(allItems.length / perPage));
@@ -415,7 +434,6 @@
       setTimeout(() => {
         grid.innerHTML = "";
         slice.forEach((item, idx) => {
-          // idx는 페이지 기준이 아니라 전체 기준이 overlay id에 쓰일 수 있어 겹치지 않게 글로벌 인덱스 사용
           const globalIdx = start + idx;
           grid.appendChild(buildCard(item, globalIdx));
         });
@@ -441,9 +459,6 @@
     }
 
     function reloadAll(){
-      // 현재 렌더링된 iframe 포함, 전체 items 기준으로 "현재 페이지"만 보이므로
-      // 전체 리로드는 '현재 페이지 iframe'도 리로드하고,
-      // 그리고 다음 페이지로 넘어가도 새로 src가 구성될 때 cacheBust로 새로고침됨.
       document.querySelectorAll(".card iframe").forEach(iframe => {
         iframe.src = withCacheBust(iframe.src);
       });
@@ -521,19 +536,12 @@
     // -----------------------------
     reloadAllBtn.addEventListener("click", reloadAll);
     reloadPageBtn.addEventListener("click", reloadCurrentPage);
-    nextPageBtn.addEventListener("click", () => {
-      if (!pageAutoOn) goNextPage();
-      else goNextPage();
-    });
-    prevPageBtn.addEventListener("click", () => {
-      if (!pageAutoOn) goPrevPage();
-      else goPrevPage();
-    });
+    nextPageBtn.addEventListener("click", () => goNextPage());
+    prevPageBtn.addEventListener("click", () => goPrevPage());
 
     togglePageAutoBtn.addEventListener("click", () => setPageAuto(!pageAutoOn));
 
     minusPerPageBtn.addEventListener("click", () => {
-      // 최소 4개, 최대 24개(너무 과하면 가독성 떨어져서 제한)
       perPage = Math.max(4, perPage - 4);
       updatePerPageUI();
     });
