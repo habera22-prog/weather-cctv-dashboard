@@ -4,28 +4,39 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>CCTV 12권역 모니터링</title>
+<title>GS SHOP CCTV 실시간 관제센터</title>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
 <style>
 :root{
-  --bg:#0b0b0c;
-  --panel:rgba(255,255,255,.06);
+  --bg:#07080a;
+  --panel:#111318;
+  --panel2:#171a21;
   --border:rgba(255,255,255,.12);
-  --border2:rgba(255,255,255,.20);
-  --text:#fff;
-  --muted:rgba(255,255,255,.65);
+  --border2:rgba(255,255,255,.22);
+  --text:#f8fafc;
+  --muted:rgba(248,250,252,.62);
   --accent:#8cbf9f;
-  --danger:#ff6b6b;
-  --headerH:60px;
+  --danger:#ef4444;
+  --warn:#f59e0b;
+  --ok:#22c55e;
+  --headerH:74px;
+  --gap:10px;
 }
 
 *{ box-sizing:border-box; }
-html,body{ height:100%; margin:0; }
 
-body{
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+html,body{
+  margin:0;
+  width:100%;
+  min-height:100%;
   background:var(--bg);
   color:var(--text);
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+}
+
+body{
   overflow:hidden;
 }
 
@@ -35,115 +46,181 @@ header{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:12px;
-  padding:0 16px;
-  background:rgba(0,0,0,.85);
+  gap:14px;
+  padding:12px 16px;
+  background:
+    linear-gradient(90deg, rgba(7,8,10,.98), rgba(17,24,39,.94)),
+    #07080a;
   border-bottom:1px solid var(--border);
 }
 
-header b{ font-size:15px; }
-header span{ font-size:12px; color:var(--muted); }
-
-/* ================= LAYOUT ================= */
-.main{
-  height:calc(100vh - var(--headerH));
-  display:grid;
-  grid-template-columns:280px 1fr;
+.brand{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  min-width:220px;
 }
 
-/* ================= LEFT ================= */
-.left{
-  overflow:auto;
-  border-right:1px solid var(--border);
-  background:rgba(255,255,255,.03);
+.brand-title{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:16px;
+  font-weight:900;
+  letter-spacing:-.2px;
 }
 
-.item{
-  padding:11px 12px;
-  border-bottom:1px solid rgba(255,255,255,.06);
-  cursor:pointer;
-  transition:.15s ease;
+.live-dot{
+  width:9px;
+  height:9px;
+  border-radius:50%;
+  background:var(--ok);
+  box-shadow:0 0 0 0 rgba(34,197,94,.8);
+  animation:pulse 1.8s infinite;
 }
-.item:hover{
-  background:rgba(255,255,255,.06);
+
+@keyframes pulse{
+  0%{ box-shadow:0 0 0 0 rgba(34,197,94,.8); }
+  70%{ box-shadow:0 0 0 9px rgba(34,197,94,0); }
+  100%{ box-shadow:0 0 0 0 rgba(34,197,94,0); }
 }
-.item b{
-  display:block;
-  font-size:13px;
-  line-height:1.35;
-}
-.item small{
-  display:block;
-  margin-top:3px;
-  font-size:11px;
+
+.brand-sub{
+  font-size:12px;
   color:var(--muted);
-  line-height:1.35;
 }
-.item.active{
+
+.controls{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.btn{
+  border:1px solid var(--border2);
+  background:rgba(255,255,255,.06);
+  color:var(--text);
+  border-radius:10px;
+  padding:8px 10px;
+  font-size:12px;
+  cursor:pointer;
+  text-decoration:none;
+  white-space:nowrap;
+}
+
+.btn:hover{
+  background:rgba(255,255,255,.12);
+}
+
+.btn.on{
+  border-color:rgba(140,191,159,.65);
   background:rgba(140,191,159,.18);
-  box-shadow: inset 4px 0 0 var(--accent);
 }
 
-/* ================= RIGHT ================= */
-.right{
-  position:relative;
+.status-pill{
+  border:1px solid var(--border);
+  background:rgba(255,255,255,.05);
+  border-radius:999px;
+  padding:7px 10px;
+  color:var(--muted);
+  font-size:12px;
+  white-space:nowrap;
+}
+
+/* ================= GRID ================= */
+.dashboard{
+  height:calc(100vh - var(--headerH));
+  padding:var(--gap);
+  display:grid;
+  grid-template-columns:repeat(4, minmax(260px, 1fr));
+  gap:var(--gap);
+  overflow:auto;
   background:
-    radial-gradient(800px 400px at 40% 20%, rgba(255,255,255,.08), transparent 60%),
-    radial-gradient(900px 500px at 70% 70%, rgba(140,191,159,.10), transparent 60%),
-    #000;
+    radial-gradient(900px 500px at 20% 20%, rgba(140,191,159,.08), transparent 60%),
+    radial-gradient(1000px 600px at 80% 80%, rgba(59,130,246,.06), transparent 60%),
+    #07080a;
 }
 
-.viewer-head{
-  height:44px;
+.card{
+  min-height:250px;
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+  border:1px solid var(--border);
+  border-radius:16px;
+  overflow:hidden;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+  display:flex;
+  flex-direction:column;
+}
+
+.card-head{
+  height:48px;
+  padding:8px 10px;
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:10px;
-  padding:0 14px;
-  border-bottom:1px solid var(--border);
-  background:rgba(0,0,0,.6);
-  font-size:13px;
+  background:rgba(0,0,0,.24);
+  border-bottom:1px solid rgba(255,255,255,.08);
 }
 
-.viewer-title{
+.meta{
   min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.region{
+  font-size:13px;
+  font-weight:900;
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
 }
 
-.actions{
-  display:flex;
-  gap:8px;
-  align-items:center;
-  flex-wrap:nowrap;
-}
-
-.stage{
-  height:calc(100% - 44px);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:14px;
-}
-
-.player{
-  width:min(1200px,100%);
-  background:rgba(255,255,255,.06);
-  border:1px solid var(--border);
-  border-radius:14px;
+.note{
+  font-size:11px;
+  color:var(--muted);
   overflow:hidden;
-  box-shadow:0 20px 60px rgba(0,0,0,.5);
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
 
-.ratio{
+.card-actions{
+  display:flex;
+  gap:6px;
+  flex:none;
+}
+
+.small-btn{
+  border:1px solid var(--border2);
+  background:rgba(255,255,255,.06);
+  color:var(--text);
+  border-radius:999px;
+  padding:6px 8px;
+  font-size:11px;
+  cursor:pointer;
+  text-decoration:none;
+  white-space:nowrap;
+}
+
+.small-btn:hover{
+  background:rgba(255,255,255,.12);
+}
+
+.screen{
   position:relative;
   width:100%;
-  padding-top:56.25%;
+  aspect-ratio:16/9;
   background:#000;
+  flex:1;
+  min-height:180px;
 }
 
-.ratio iframe{
+.screen iframe,
+.screen video{
   position:absolute;
   inset:0;
   width:100%;
@@ -152,92 +229,105 @@ header span{ font-size:12px; color:var(--muted); }
   background:#000;
 }
 
-.placeholder{
+.screen video{
+  object-fit:cover;
+}
+
+.loading,
+.error-box{
   position:absolute;
   inset:0;
   display:flex;
   align-items:center;
   justify-content:center;
-  padding:24px;
   text-align:center;
-  color:rgba(255,255,255,.72);
-  font-size:13px;
-  line-height:1.6;
+  padding:16px;
+  font-size:12px;
+  line-height:1.55;
+  color:rgba(255,255,255,.76);
   background:
-    radial-gradient(500px 260px at 50% 40%, rgba(140,191,159,.14), transparent 60%),
+    radial-gradient(450px 240px at 50% 45%, rgba(140,191,159,.12), transparent 60%),
     #000;
-}
-
-.block-overlay{
-  position:absolute;
-  inset:0;
-  display:none;
-  align-items:center;
-  justify-content:center;
-  padding:18px;
-  text-align:center;
-  background:linear-gradient(0deg, rgba(0,0,0,.72), rgba(0,0,0,.45));
   z-index:3;
 }
 
-.block-overlay.show{
+.error-box{
+  display:none;
+  background:
+    linear-gradient(0deg, rgba(0,0,0,.82), rgba(0,0,0,.62)),
+    #000;
+}
+
+.error-box.show{
   display:flex;
 }
 
-.block-box{
-  width:min(420px,100%);
-  border:1px solid rgba(255,255,255,.18);
-  background:rgba(20,20,22,.86);
+.error-inner{
+  max-width:340px;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(255,255,255,.06);
   border-radius:14px;
-  padding:16px 14px;
-  box-shadow:0 20px 50px rgba(0,0,0,.45);
-}
-
-.block-box b{
-  display:block;
-  margin-bottom:8px;
-  font-size:14px;
-}
-
-.block-box p{
-  margin:0 0 12px 0;
-  color:rgba(255,255,255,.70);
-  font-size:12px;
-  line-height:1.55;
-}
-
-.player-foot{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:10px;
   padding:12px;
-  font-size:12px;
-  color:var(--muted);
-  border-top:1px solid rgba(255,255,255,.08);
 }
 
-.btn{
-  padding:7px 10px;
-  border-radius:10px;
-  border:1px solid var(--border2);
-  background:rgba(255,255,255,.08);
-  color:#fff;
-  cursor:pointer;
-  font-size:12px;
-  text-decoration:none;
+.error-inner b{
+  display:block;
+  margin-bottom:6px;
+  font-size:13px;
+}
+
+.card-foot{
+  min-height:34px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:8px 10px;
+  border-top:1px solid rgba(255,255,255,.08);
+  font-size:11px;
+  color:var(--muted);
+  background:rgba(0,0,0,.20);
+}
+
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  border-radius:999px;
+  padding:4px 7px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.10);
+  color:rgba(255,255,255,.76);
   white-space:nowrap;
 }
-.btn:hover{
-  background:rgba(255,255,255,.14);
+
+.badge.ok::before{
+  content:"";
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:var(--ok);
 }
-.btn.primary{
-  background:rgba(140,191,159,.22);
-  border-color:rgba(140,191,159,.48);
+
+.badge.warn::before{
+  content:"";
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:var(--warn);
 }
-.btn.danger{
-  border-color:rgba(255,107,107,.45);
-  color:#ffd6d6;
+
+.empty{
+  grid-column:1/-1;
+  min-height:240px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  color:var(--muted);
+  border:1px dashed var(--border);
+  border-radius:16px;
+  background:rgba(255,255,255,.04);
 }
 
 .toast{
@@ -245,23 +335,28 @@ header span{ font-size:12px; color:var(--muted); }
   left:50%;
   bottom:16px;
   transform:translateX(-50%);
-  z-index:10;
+  z-index:50;
   padding:10px 12px;
   border-radius:12px;
-  background:rgba(0,0,0,.75);
-  border:1px solid rgba(255,255,255,.14);
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(0,0,0,.78);
   color:#fff;
   font-size:12px;
   opacity:0;
   pointer-events:none;
   transition:.18s ease;
 }
+
 .toast.show{
   opacity:1;
 }
 
-/* ================= MOBILE ================= */
-@media (max-width: 780px){
+/* ================= RESPONSIVE ================= */
+@media (max-width:1400px){
+  .dashboard{ grid-template-columns:repeat(3, minmax(260px, 1fr)); }
+}
+
+@media (max-width:980px){
   body{ overflow:auto; }
 
   header{
@@ -269,46 +364,22 @@ header span{ font-size:12px; color:var(--muted); }
     min-height:var(--headerH);
     align-items:flex-start;
     flex-direction:column;
-    justify-content:center;
-    padding:12px 14px;
   }
 
-  .main{
+  .controls{
+    justify-content:flex-start;
+  }
+
+  .dashboard{
     height:auto;
     min-height:calc(100vh - var(--headerH));
+    grid-template-columns:repeat(2, minmax(220px, 1fr));
+  }
+}
+
+@media (max-width:620px){
+  .dashboard{
     grid-template-columns:1fr;
-  }
-
-  .left{
-    max-height:34vh;
-    border-right:0;
-    border-bottom:1px solid var(--border);
-  }
-
-  .right{
-    min-height:66vh;
-  }
-
-  .viewer-head{
-    height:auto;
-    min-height:48px;
-    align-items:flex-start;
-    flex-direction:column;
-    padding:10px 12px;
-  }
-
-  .actions{
-    width:100%;
-    flex-wrap:wrap;
-  }
-
-  .stage{
-    padding:10px;
-  }
-
-  .player-foot{
-    align-items:flex-start;
-    flex-direction:column;
   }
 }
 </style>
@@ -317,83 +388,50 @@ header span{ font-size:12px; color:var(--muted); }
 <body>
 
 <header>
-  <b>CCTV 12권역 모니터링</b>
-  <span id="status">로딩 중…</span>
+  <div class="brand">
+    <div class="brand-title">
+      <span class="live-dot"></span>
+      <span>GS SHOP CCTV 실시간 관제센터</span>
+    </div>
+    <div class="brand-sub" id="subText">대표CCTV 데이터 로딩 중…</div>
+  </div>
+
+  <div class="controls">
+    <span class="status-pill" id="countText">-</span>
+    <span class="status-pill" id="refreshText">자동새로고침 60초</span>
+    <button class="btn" id="reloadBtn">전체 리로드</button>
+    <button class="btn on" id="autoBtn">자동새로고침 ON</button>
+    <button class="btn" id="fitBtn">화면맞춤</button>
+  </div>
 </header>
 
-<div class="main">
-  <div class="left" id="list"></div>
-
-  <div class="right">
-    <div class="viewer-head">
-      <span id="viewerTitle" class="viewer-title">좌측에서 CCTV 선택</span>
-      <div class="actions">
-        <a id="openBtn" class="btn primary" target="_blank" rel="noopener noreferrer" style="display:none">새창 재생</a>
-        <button id="copyBtn" class="btn" style="display:none">URL 복사</button>
-        <button id="reloadBtn" class="btn" style="display:none">화면 리로드</button>
-        <button id="hideOverlayBtn" class="btn danger" style="display:none">안내 닫기</button>
-      </div>
-    </div>
-
-    <div class="stage">
-      <div class="player">
-        <div class="ratio">
-          <div id="placeholder" class="placeholder">
-            좌측 목록에서 권역별 CCTV를 선택해 주세요.<br>
-            일부 CCTV는 보안 정책으로 화면 내 재생이 제한될 수 있습니다.
-          </div>
-
-          <iframe
-            id="viewer"
-            src="about:blank"
-            referrerpolicy="no-referrer"
-            allowfullscreen>
-          </iframe>
-
-          <div id="blockOverlay" class="block-overlay">
-            <div class="block-box">
-              <b>화면 내 재생이 안 될 수 있습니다</b>
-              <p>
-                CCTV 제공 사이트의 보안 정책 때문에 GitHub 화면 안에서는
-                “비정상적인 접근” 또는 빈 화면이 표시될 수 있습니다.<br>
-                이 경우 새창 재생을 눌러 확인해 주세요.
-              </p>
-              <a id="overlayOpenBtn" class="btn primary" target="_blank" rel="noopener noreferrer">새창으로 보기</a>
-            </div>
-          </div>
-        </div>
-
-        <div class="player-foot">
-          <span>※ iframe 차단 시 새창 재생 권장</span>
-          <span>KBS · 경찰청 · 지자체 CCTV</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="toast" class="toast"></div>
+<main class="dashboard" id="dashboard"></main>
+<div class="toast" id="toast"></div>
 
 <script>
+/**
+ * 대표CCTV 시트 CSV
+ * 컬럼 권장:
+ * region | url | note | cctvName | coordX | coordY | updatedAt
+ */
 const CSV_URL =
 "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZZaK8GDz_FZsefh-XoCkPmQhKOugjSRNioC5M8fAUH87iiyQV8KK28wCVN4_dbWJukM-Rbwkkbz_G/pub?gid=1422576665&single=true&output=csv";
 
-const list = document.getElementById("list");
-const viewer = document.getElementById("viewer");
-const viewerTitle = document.getElementById("viewerTitle");
-const openBtn = document.getElementById("openBtn");
-const copyBtn = document.getElementById("copyBtn");
+const dashboard = document.getElementById("dashboard");
+const subText = document.getElementById("subText");
+const countText = document.getElementById("countText");
+const refreshText = document.getElementById("refreshText");
 const reloadBtn = document.getElementById("reloadBtn");
-const hideOverlayBtn = document.getElementById("hideOverlayBtn");
-const overlayOpenBtn = document.getElementById("overlayOpenBtn");
-const blockOverlay = document.getElementById("blockOverlay");
-const placeholder = document.getElementById("placeholder");
-const status = document.getElementById("status");
+const autoBtn = document.getElementById("autoBtn");
+const fitBtn = document.getElementById("fitBtn");
 const toast = document.getElementById("toast");
 
-let currentUrl = "";
-let currentRegion = "";
-let overlayTimer = null;
+let items = [];
+let autoRefresh = true;
+let refreshSec = 60;
+let refreshTimer = null;
+let fitMode = false;
+let hlsPlayers = [];
 
 function showToast(msg){
   toast.textContent = msg;
@@ -418,12 +456,6 @@ function escapeAttr(s){
     .replace(/>/g,"&gt;");
 }
 
-/**
- * CSV 안정 파서
- * - 쉼표가 포함된 URL/메모
- * - 큰따옴표 포함
- * - CRLF/LF 모두 대응
- */
 function parseCSV(text){
   const rows = [];
   let row = [];
@@ -456,10 +488,7 @@ function parseCSV(text){
       row.push(cur);
       cur = "";
 
-      if (row.some(v => String(v || "").trim() !== "")) {
-        rows.push(row);
-      }
-
+      if (row.some(v => String(v || "").trim() !== "")) rows.push(row);
       row = [];
       continue;
     }
@@ -469,9 +498,7 @@ function parseCSV(text){
 
   if (cur.length || row.length) {
     row.push(cur);
-    if (row.some(v => String(v || "").trim() !== "")) {
-      rows.push(row);
-    }
+    if (row.some(v => String(v || "").trim() !== "")) rows.push(row);
   }
 
   return rows;
@@ -498,160 +525,294 @@ function mapRows(rows){
   const iRegion = idx["region"] ?? idx["권역"] ?? idx["지역"] ?? 0;
   const iUrl = idx["url"] ?? idx["링크"] ?? idx["cctv"] ?? idx["주소"] ?? 1;
   const iNote = idx["note"] ?? idx["비고"] ?? idx["설명"] ?? 2;
+  const iName = idx["cctvname"] ?? idx["cctv명"] ?? idx["이름"] ?? 3;
+  const iUpdated = idx["updatedat"] ?? idx["갱신일시"] ?? idx["수정일시"] ?? 6;
 
   return rows.slice(1)
     .map(r => ({
       region: String(r[iRegion] ?? "").trim(),
       url: String(r[iUrl] ?? "").trim(),
-      note: String(r[iNote] ?? "").trim()
+      note: String(r[iNote] ?? "").trim(),
+      name: String(r[iName] ?? "").trim(),
+      updatedAt: String(r[iUpdated] ?? "").trim()
     }))
-    .filter(d => d.region && d.url);
+    .filter(x => x.region && x.url);
 }
 
 function withCacheBust(url){
   if (!url) return "";
 
-  try {
+  try{
     const u = new URL(url);
     u.searchParams.set("_t", Date.now());
     return u.toString();
-  } catch(e) {
+  }catch(e){
     return url + (url.includes("?") ? "&" : "?") + "_t=" + Date.now();
   }
 }
 
-function showBlockOverlay(){
-  if (!currentUrl) return;
-  blockOverlay.classList.add("show");
-  hideOverlayBtn.style.display = "inline-block";
+function isHlsUrl(url){
+  const u = String(url || "").toLowerCase();
+  return u.includes(".m3u8") || u.includes("m3u8");
 }
 
-function hideBlockOverlay(){
-  blockOverlay.classList.remove("show");
-  hideOverlayBtn.style.display = "none";
+function clearHlsPlayers(){
+  hlsPlayers.forEach(hls => {
+    try{ hls.destroy(); }catch(e){}
+  });
+  hlsPlayers = [];
 }
 
-function setViewer(d){
-  currentUrl = d.url;
-  currentRegion = d.region;
+function buildCard(item, index){
+  const card = document.createElement("section");
+  card.className = "card";
 
-  hideBlockOverlay();
+  const label = item.name || item.note || "CCTV";
+  const mode = isHlsUrl(item.url) ? "HLS" : "WEB";
 
-  if (overlayTimer) {
-    clearTimeout(overlayTimer);
-    overlayTimer = null;
-  }
+  card.innerHTML = `
+    <div class="card-head">
+      <div class="meta">
+        <div class="region">${escapeHtml(item.region)}</div>
+        <div class="note">${escapeHtml(label)}</div>
+      </div>
+      <div class="card-actions">
+        <a class="small-btn" href="${escapeAttr(item.url)}" target="_blank" rel="noopener noreferrer">새창</a>
+        <button class="small-btn" data-action="reload">리로드</button>
+      </div>
+    </div>
 
-  placeholder.style.display = "none";
-
-  viewerTitle.textContent = d.region;
-  openBtn.href = d.url;
-  overlayOpenBtn.href = d.url;
-
-  openBtn.style.display = "inline-block";
-  copyBtn.style.display = "inline-block";
-  reloadBtn.style.display = "inline-block";
-
-  viewer.src = withCacheBust(d.url);
-
-  status.textContent = `${d.region} 선택됨 · ${new Date().toLocaleTimeString("ko-KR")}`;
-
-  /**
-   * iframe 차단은 브라우저 보안상 정확히 감지하기 어렵습니다.
-   * 그래서 3초 후 안내를 띄워 새창 재생을 유도합니다.
-   */
-  overlayTimer = setTimeout(() => {
-    showBlockOverlay();
-  }, 3000);
-}
-
-async function load(){
-  status.textContent = "CSV 로딩 중…";
-  list.innerHTML = "";
-
-  try {
-    const res = await fetch(CSV_URL, { cache:"no-store" });
-
-    if (!res.ok) {
-      throw new Error("CSV HTTP " + res.status);
-    }
-
-    const text = await res.text();
-    const rows = parseCSV(text);
-    const data = mapRows(rows);
-
-    if (!data.length) {
-      status.textContent = "표시할 CCTV 데이터가 없습니다. CSV 컬럼/게시 상태를 확인해 주세요.";
-      list.innerHTML = `
-        <div class="item">
-          <b>데이터 없음</b>
-          <small>구글시트 CSV 게시 상태 또는 컬럼명을 확인해 주세요.</small>
+    <div class="screen" id="screen_${index}">
+      <div class="loading">CCTV 연결 중…</div>
+      <div class="error-box" id="err_${index}">
+        <div class="error-inner">
+          <b>화면 내 재생이 제한될 수 있습니다</b>
+          사이트 정책 또는 CCTV URL 형식에 따라 브라우저 내 재생이 안 될 수 있습니다.<br><br>
+          <a class="small-btn" href="${escapeAttr(item.url)}" target="_blank" rel="noopener noreferrer">새창으로 보기</a>
         </div>
-      `;
+      </div>
+    </div>
+
+    <div class="card-foot">
+      <span class="badge ok">${mode}</span>
+      <span>${escapeHtml(item.updatedAt || "실시간 연결")}</span>
+    </div>
+  `;
+
+  card.querySelector('[data-action="reload"]').addEventListener("click", () => {
+    reloadOne(card, item, index);
+  });
+
+  return card;
+}
+
+function mountViewer(card, item, index){
+  const screen = card.querySelector(`#screen_${index}`);
+  const loading = screen.querySelector(".loading");
+  const errorBox = screen.querySelector(`#err_${index}`);
+
+  if (!screen) return;
+
+  const oldFrame = screen.querySelector("iframe");
+  const oldVideo = screen.querySelector("video");
+  if (oldFrame) oldFrame.remove();
+  if (oldVideo) oldVideo.remove();
+
+  loading.style.display = "flex";
+  errorBox.classList.remove("show");
+
+  const url = withCacheBust(item.url);
+
+  if (isHlsUrl(item.url)) {
+    const video = document.createElement("video");
+    video.muted = true;
+    video.autoplay = true;
+    video.controls = true;
+    video.playsInline = true;
+
+    screen.appendChild(video);
+
+    if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = url;
+    } else if (window.Hls && Hls.isSupported()) {
+      const hls = new Hls({
+        liveSyncDuration: 6,
+        maxLiveSyncPlaybackRate: 1.5,
+        enableWorker: true
+      });
+      hls.loadSource(url);
+      hls.attachMedia(video);
+      hlsPlayers.push(hls);
+    } else {
+      loading.style.display = "none";
+      errorBox.classList.add("show");
       return;
     }
 
-    data.forEach((d) => {
-      const div = document.createElement("div");
-      div.className = "item";
-      div.innerHTML = `
-        <b>${escapeHtml(d.region)}</b>
-        <small>${d.note ? escapeHtml(d.note) : "CCTV 바로가기"}</small>
-      `;
-
-      div.onclick = () => {
-        document.querySelectorAll(".item").forEach(x => x.classList.remove("active"));
-        div.classList.add("active");
-        setViewer(d);
-      };
-
-      list.appendChild(div);
+    video.addEventListener("loadeddata", () => {
+      loading.style.display = "none";
     });
 
-    status.textContent = `총 ${data.length}개 · ${new Date().toLocaleTimeString("ko-KR")}`;
+    video.addEventListener("error", () => {
+      loading.style.display = "none";
+      errorBox.classList.add("show");
+    });
 
-  } catch(e) {
-    console.error(e);
-    status.textContent = "로딩 실패: " + (e.message || e);
-    list.innerHTML = `
-      <div class="item">
-        <b>CSV 로딩 실패</b>
-        <small>구글시트 웹 게시 여부와 CSV_URL을 확인해 주세요.</small>
-      </div>
-    `;
+    setTimeout(() => {
+      if (loading.style.display !== "none") {
+        loading.style.display = "none";
+      }
+    }, 5000);
+
+  } else {
+    const iframe = document.createElement("iframe");
+    iframe.src = url;
+    iframe.referrerPolicy = "no-referrer";
+    iframe.allowFullscreen = true;
+    iframe.loading = "lazy";
+
+    screen.appendChild(iframe);
+
+    iframe.addEventListener("load", () => {
+      loading.style.display = "none";
+    });
+
+    setTimeout(() => {
+      loading.style.display = "none";
+    }, 4000);
+
+    /**
+     * iframe 차단은 보안상 정확한 감지가 어렵습니다.
+     * 화면이 비거나 "비정상 접근"이면 새창 버튼을 사용하세요.
+     */
   }
 }
 
-copyBtn.onclick = async () => {
-  if (!currentUrl) return;
+function render(){
+  clearHlsPlayers();
+  dashboard.innerHTML = "";
 
-  try {
-    await navigator.clipboard.writeText(currentUrl);
-    status.textContent = "URL 복사 완료";
-    showToast("URL 복사 완료");
-  } catch(e) {
-    showToast("복사 실패: 브라우저 권한을 확인해 주세요.");
+  if (!items.length) {
+    dashboard.innerHTML = `
+      <div class="empty">
+        표시할 CCTV 데이터가 없습니다.<br>
+        대표CCTV 시트의 region / url 컬럼과 웹 게시 상태를 확인해 주세요.
+      </div>
+    `;
+    countText.textContent = "0개";
+    return;
   }
-};
 
-reloadBtn.onclick = () => {
-  if (!currentUrl) return;
-  hideBlockOverlay();
-  viewer.src = withCacheBust(currentUrl);
-  status.textContent = `${currentRegion} 리로드 · ${new Date().toLocaleTimeString("ko-KR")}`;
+  items.forEach((item, index) => {
+    const card = buildCard(item, index);
+    dashboard.appendChild(card);
+    mountViewer(card, item, index);
+  });
 
-  if (overlayTimer) clearTimeout(overlayTimer);
-  overlayTimer = setTimeout(() => {
-    showBlockOverlay();
-  }, 3000);
-};
+  const now = new Date();
+  const updated = items.find(x => x.updatedAt)?.updatedAt || "-";
+  countText.textContent = `${items.length}개 권역`;
+  subText.textContent = `마지막 화면 로드: ${now.toLocaleString("ko-KR")} · CCTV 데이터 갱신: ${updated}`;
+}
 
-hideOverlayBtn.onclick = () => {
-  hideBlockOverlay();
-};
+function reloadOne(card, item, index){
+  mountViewer(card, item, index);
+  showToast(`${item.region} 리로드`);
+}
 
-load();
+function reloadAll(){
+  render();
+  showToast("전체 CCTV 리로드 완료");
+}
+
+async function loadData(){
+  subText.textContent = "대표CCTV 데이터 로딩 중…";
+
+  try{
+    const res = await fetch(CSV_URL, { cache:"no-store" });
+    if (!res.ok) throw new Error("CSV HTTP " + res.status);
+
+    const text = await res.text();
+    const rows = parseCSV(text);
+    items = mapRows(rows);
+
+    render();
+
+  }catch(e){
+    console.error(e);
+    dashboard.innerHTML = `
+      <div class="empty">
+        CSV 로딩 실패<br>
+        ${escapeHtml(e.message || e)}<br><br>
+        구글시트 웹 게시 상태와 CSV_URL을 확인해 주세요.
+      </div>
+    `;
+    subText.textContent = "CSV 로딩 실패";
+    countText.textContent = "-";
+  }
+}
+
+function startAutoRefresh(){
+  if (refreshTimer) clearInterval(refreshTimer);
+
+  if (!autoRefresh) {
+    refreshText.textContent = "자동새로고침 OFF";
+    autoBtn.textContent = "자동새로고침 OFF";
+    autoBtn.classList.remove("on");
+    return;
+  }
+
+  refreshText.textContent = `자동새로고침 ${refreshSec}초`;
+  autoBtn.textContent = "자동새로고침 ON";
+  autoBtn.classList.add("on");
+
+  refreshTimer = setInterval(() => {
+    loadData();
+    showToast("자동 새로고침");
+  }, refreshSec * 1000);
+}
+
+reloadBtn.addEventListener("click", () => {
+  loadData();
+});
+
+autoBtn.addEventListener("click", () => {
+  autoRefresh = !autoRefresh;
+  startAutoRefresh();
+  showToast(autoRefresh ? "자동새로고침 ON" : "자동새로고침 OFF");
+});
+
+fitBtn.addEventListener("click", () => {
+  fitMode = !fitMode;
+
+  if (fitMode) {
+    dashboard.style.gridTemplateColumns = "repeat(4, minmax(220px, 1fr))";
+    fitBtn.classList.add("on");
+    showToast("화면맞춤 모드");
+  } else {
+    dashboard.style.gridTemplateColumns = "";
+    fitBtn.classList.remove("on");
+    showToast("기본 화면 모드");
+  }
+});
+
+window.addEventListener("keydown", (e) => {
+  if (e.key.toLowerCase() === "r") {
+    e.preventDefault();
+    loadData();
+  }
+
+  if (e.key === " ") {
+    e.preventDefault();
+    autoRefresh = !autoRefresh;
+    startAutoRefresh();
+  }
+});
+
+loadData();
+startAutoRefresh();
 </script>
+
 </body>
 </html>
 ```
