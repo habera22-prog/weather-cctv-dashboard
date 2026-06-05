@@ -6,13 +6,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>GS SHOP CCTV 실시간 관제센터</title>
 
+<!-- m3u8(HLS) 영상 URL 재생용 -->
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
 <style>
 :root{
   --bg:#07080a;
   --panel:#111318;
-  --panel2:#171a21;
   --border:rgba(255,255,255,.12);
   --border2:rgba(255,255,255,.22);
   --text:#f8fafc;
@@ -129,7 +129,7 @@ header{
   white-space:nowrap;
 }
 
-/* ================= GRID ================= */
+/* ================= DASHBOARD ================= */
 .dashboard{
   height:calc(100vh - var(--headerH));
   padding:var(--gap);
@@ -155,7 +155,7 @@ header{
 }
 
 .card-head{
-  height:48px;
+  height:52px;
   padding:8px 10px;
   display:flex;
   align-items:center;
@@ -234,7 +234,8 @@ header{
 }
 
 .loading,
-.error-box{
+.error-box,
+.utic-box{
   position:absolute;
   inset:0;
   display:flex;
@@ -251,33 +252,43 @@ header{
   z-index:3;
 }
 
-.error-box{
+.error-box,
+.utic-box{
   display:none;
   background:
-    linear-gradient(0deg, rgba(0,0,0,.82), rgba(0,0,0,.62)),
+    linear-gradient(0deg, rgba(0,0,0,.86), rgba(0,0,0,.66)),
     #000;
 }
 
-.error-box.show{
+.error-box.show,
+.utic-box.show{
   display:flex;
 }
 
-.error-inner{
-  max-width:340px;
+.info-inner{
+  max-width:360px;
   border:1px solid rgba(255,255,255,.16);
   background:rgba(255,255,255,.06);
   border-radius:14px;
-  padding:12px;
+  padding:14px;
 }
 
-.error-inner b{
+.info-inner b{
   display:block;
-  margin-bottom:6px;
+  margin-bottom:7px;
   font-size:13px;
+  color:#fff;
+}
+
+.info-inner p{
+  margin:0 0 12px 0;
+  color:rgba(255,255,255,.72);
+  font-size:12px;
+  line-height:1.55;
 }
 
 .card-foot{
-  min-height:34px;
+  min-height:36px;
   display:flex;
   align-items:center;
   justify-content:space-between;
@@ -315,6 +326,14 @@ header{
   height:6px;
   border-radius:50%;
   background:var(--warn);
+}
+
+.badge.web::before{
+  content:"";
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:#60a5fa;
 }
 
 .empty{
@@ -411,7 +430,7 @@ header{
 <script>
 /**
  * 대표CCTV 시트 CSV
- * 컬럼 권장:
+ * 권장 컬럼:
  * region | url | note | cctvName | coordX | coordY | updatedAt
  */
 const CSV_URL =
@@ -556,6 +575,11 @@ function isHlsUrl(url){
   return u.includes(".m3u8") || u.includes("m3u8");
 }
 
+function isUticPageUrl(url){
+  const u = String(url || "").toLowerCase();
+  return u.includes("utic.go.kr") || u.includes("www.utic.go.kr");
+}
+
 function clearHlsPlayers(){
   hlsPlayers.forEach(hls => {
     try{ hls.destroy(); }catch(e){}
@@ -563,12 +587,25 @@ function clearHlsPlayers(){
   hlsPlayers = [];
 }
 
+function getMode(item){
+  if (isHlsUrl(item.url)) return "HLS";
+  if (isUticPageUrl(item.url)) return "UTIC";
+  return "WEB";
+}
+
+function getBadgeClass(mode){
+  if (mode === "HLS") return "ok";
+  if (mode === "UTIC") return "warn";
+  return "web";
+}
+
 function buildCard(item, index){
   const card = document.createElement("section");
   card.className = "card";
 
   const label = item.name || item.note || "CCTV";
-  const mode = isHlsUrl(item.url) ? "HLS" : "WEB";
+  const mode = getMode(item);
+  const badgeClass = getBadgeClass(mode);
 
   card.innerHTML = `
     <div class="card-head">
@@ -584,17 +621,33 @@ function buildCard(item, index){
 
     <div class="screen" id="screen_${index}">
       <div class="loading">CCTV 연결 중…</div>
+
+      <div class="utic-box" id="utic_${index}">
+        <div class="info-inner">
+          <b>UTIC 새창 확인 필요</b>
+          <p>
+            국가교통정보센터 페이지는 보안 정책상 외부 화면에 삽입하면
+            “비정상적인 접근”으로 차단될 수 있습니다.<br>
+            실시간 CCTV는 새창에서 확인해 주세요.
+          </p>
+          <a class="small-btn" href="${escapeAttr(item.url)}" target="_blank" rel="noopener noreferrer">새창으로 보기</a>
+        </div>
+      </div>
+
       <div class="error-box" id="err_${index}">
-        <div class="error-inner">
-          <b>화면 내 재생이 제한될 수 있습니다</b>
-          사이트 정책 또는 CCTV URL 형식에 따라 브라우저 내 재생이 안 될 수 있습니다.<br><br>
+        <div class="info-inner">
+          <b>화면 내 재생 제한</b>
+          <p>
+            CCTV URL 형식 또는 제공 사이트 정책에 따라 관제센터 내부 재생이 안 될 수 있습니다.<br>
+            아래 버튼으로 새창 확인을 권장합니다.
+          </p>
           <a class="small-btn" href="${escapeAttr(item.url)}" target="_blank" rel="noopener noreferrer">새창으로 보기</a>
         </div>
       </div>
     </div>
 
     <div class="card-foot">
-      <span class="badge ok">${mode}</span>
+      <span class="badge ${badgeClass}">${mode}</span>
       <span>${escapeHtml(item.updatedAt || "실시간 연결")}</span>
     </div>
   `;
@@ -610,19 +663,36 @@ function mountViewer(card, item, index){
   const screen = card.querySelector(`#screen_${index}`);
   const loading = screen.querySelector(".loading");
   const errorBox = screen.querySelector(`#err_${index}`);
+  const uticBox = screen.querySelector(`#utic_${index}`);
 
   if (!screen) return;
 
   const oldFrame = screen.querySelector("iframe");
   const oldVideo = screen.querySelector("video");
+
   if (oldFrame) oldFrame.remove();
   if (oldVideo) oldVideo.remove();
 
   loading.style.display = "flex";
   errorBox.classList.remove("show");
+  uticBox.classList.remove("show");
 
   const url = withCacheBust(item.url);
 
+  /**
+   * ✅ 중요:
+   * UTIC 웹페이지는 iframe 삽입 시 "비정상적인 접근" 팝업이 뜸.
+   * 따라서 UTIC 페이지는 관제센터 내부 재생을 시도하지 않고 새창 안내만 표시.
+   */
+  if (isUticPageUrl(item.url) && !isHlsUrl(item.url)) {
+    loading.style.display = "none";
+    uticBox.classList.add("show");
+    return;
+  }
+
+  /**
+   * m3u8 영상 URL이면 HLS 실시간 재생 시도
+   */
   if (isHlsUrl(item.url)) {
     const video = document.createElement("video");
     video.muted = true;
@@ -640,9 +710,17 @@ function mountViewer(card, item, index){
         maxLiveSyncPlaybackRate: 1.5,
         enableWorker: true
       });
+
       hls.loadSource(url);
       hls.attachMedia(video);
       hlsPlayers.push(hls);
+
+      hls.on(Hls.Events.ERROR, function(event, data) {
+        if (data && data.fatal) {
+          loading.style.display = "none";
+          errorBox.classList.add("show");
+        }
+      });
     } else {
       loading.style.display = "none";
       errorBox.classList.add("show");
@@ -650,6 +728,10 @@ function mountViewer(card, item, index){
     }
 
     video.addEventListener("loadeddata", () => {
+      loading.style.display = "none";
+    });
+
+    video.addEventListener("playing", () => {
       loading.style.display = "none";
     });
 
@@ -664,28 +746,28 @@ function mountViewer(card, item, index){
       }
     }, 5000);
 
-  } else {
-    const iframe = document.createElement("iframe");
-    iframe.src = url;
-    iframe.referrerPolicy = "no-referrer";
-    iframe.allowFullscreen = true;
-    iframe.loading = "lazy";
-
-    screen.appendChild(iframe);
-
-    iframe.addEventListener("load", () => {
-      loading.style.display = "none";
-    });
-
-    setTimeout(() => {
-      loading.style.display = "none";
-    }, 4000);
-
-    /**
-     * iframe 차단은 보안상 정확한 감지가 어렵습니다.
-     * 화면이 비거나 "비정상 접근"이면 새창 버튼을 사용하세요.
-     */
+    return;
   }
+
+  /**
+   * 일반 웹 URL은 iframe 시도
+   * 단, UTIC는 위에서 이미 차단 처리함.
+   */
+  const iframe = document.createElement("iframe");
+  iframe.src = url;
+  iframe.referrerPolicy = "no-referrer";
+  iframe.allowFullscreen = true;
+  iframe.loading = "lazy";
+
+  screen.appendChild(iframe);
+
+  iframe.addEventListener("load", () => {
+    loading.style.display = "none";
+  });
+
+  setTimeout(() => {
+    loading.style.display = "none";
+  }, 4000);
 }
 
 function render(){
@@ -711,6 +793,7 @@ function render(){
 
   const now = new Date();
   const updated = items.find(x => x.updatedAt)?.updatedAt || "-";
+
   countText.textContent = `${items.length}개 권역`;
   subText.textContent = `마지막 화면 로드: ${now.toLocaleString("ko-KR")} · CCTV 데이터 갱신: ${updated}`;
 }
