@@ -1,580 +1,657 @@
+```html
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>CCTV 12권역 모니터링</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>CCTV 12권역 모니터링</title>
 
-  <style>
-    :root{
-      --bg:#0b0b0c;
-      --panel:rgba(255,255,255,.06);
-      --border:rgba(255,255,255,.10);
-      --border2:rgba(255,255,255,.16);
-      --text:#fff;
-      --muted:rgba(255,255,255,.65);
-      --headerH:72px;
-      --gap:10px;
-      --radius:14px;
-    }
+<style>
+:root{
+  --bg:#0b0b0c;
+  --panel:rgba(255,255,255,.06);
+  --border:rgba(255,255,255,.12);
+  --border2:rgba(255,255,255,.20);
+  --text:#fff;
+  --muted:rgba(255,255,255,.65);
+  --accent:#8cbf9f;
+  --danger:#ff6b6b;
+  --headerH:60px;
+}
 
-    html, body { height:100%; }
-    body{
-      margin:0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background:var(--bg);
-      color:var(--text);
-      overflow:hidden; /* 페이지 자체 스크롤 방지(PC 관제 느낌 유지) */
-    }
+*{ box-sizing:border-box; }
+html,body{ height:100%; margin:0; }
 
-    header{
-      position: sticky; top:0; z-index:100;
-      height: var(--headerH);
-      display:flex; align-items:center; justify-content:space-between;
-      gap:10px; flex-wrap:wrap;
+body{
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  overflow:hidden;
+}
 
-      padding:12px 14px;
-      background: rgba(11,11,12,.85);
-      backdrop-filter: blur(8px);
-      border-bottom: 1px solid rgba(255,255,255,.08);
-      box-sizing: border-box;
-    }
-    .title{ font-weight:800; font-size:14px; letter-spacing:.2px; }
-    .sub{ font-size:12px; color:var(--muted); }
+/* ================= HEADER ================= */
+header{
+  height:var(--headerH);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:0 16px;
+  background:rgba(0,0,0,.85);
+  border-bottom:1px solid var(--border);
+}
 
-    .controls{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-    .btn{
-      font-size:12px;
-      padding:8px 10px;
-      border-radius:10px;
-      border:1px solid var(--border2);
-      background: rgba(255,255,255,.06);
-      color:var(--text);
-      cursor:pointer;
-      text-decoration:none;
-      white-space:nowrap;
-    }
-    .btn:hover{ border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.10); }
+header b{ font-size:15px; }
+header span{ font-size:12px; color:var(--muted); }
 
-    /* ✅ 관제 그리드: 기본은 "페이지 단위" → PC는 스크롤 숨김 */
-    .grid{
-      height: calc(100vh - var(--headerH));
-      padding: var(--gap);
-      box-sizing:border-box;
+/* ================= LAYOUT ================= */
+.main{
+  height:calc(100vh - var(--headerH));
+  display:grid;
+  grid-template-columns:280px 1fr;
+}
 
-      display:grid;
-      grid-template-columns: repeat(4, minmax(260px, 1fr)); /* 4열 유지 */
-      gap: var(--gap);
+/* ================= LEFT ================= */
+.left{
+  overflow:auto;
+  border-right:1px solid var(--border);
+  background:rgba(255,255,255,.03);
+}
 
-      overflow:hidden; /* ✅ PC 관제: 스크롤 X (넘김으로만) */
-      grid-auto-rows: minmax(420px, auto);
-      align-items:start;
-    }
-    @media (max-width: 1200px){ .grid{ grid-template-columns: repeat(3, minmax(240px, 1fr)); } }
-    @media (max-width: 900px) { .grid{ grid-template-columns: repeat(2, minmax(240px, 1fr)); } }
-    @media (max-width: 520px) { .grid{ grid-template-columns: 1fr; } }
+.item{
+  padding:11px 12px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  cursor:pointer;
+  transition:.15s ease;
+}
+.item:hover{
+  background:rgba(255,255,255,.06);
+}
+.item b{
+  display:block;
+  font-size:13px;
+  line-height:1.35;
+}
+.item small{
+  display:block;
+  margin-top:3px;
+  font-size:11px;
+  color:var(--muted);
+  line-height:1.35;
+}
+.item.active{
+  background:rgba(140,191,159,.18);
+  box-shadow: inset 4px 0 0 var(--accent);
+}
 
-    /* ✅✅ [추가] 모바일/작은 화면에서는 grid 스크롤 허용 (아래 카드 확인 가능) */
-    @media (max-width: 900px){
-      .grid{
-        overflow-y: auto;                 /* ✅ 스크롤 ON */
-        -webkit-overflow-scrolling: touch;/* ✅ iOS 부드러운 스크롤 */
-        overscroll-behavior: contain;
-      }
-    }
+/* ================= RIGHT ================= */
+.right{
+  position:relative;
+  background:
+    radial-gradient(800px 400px at 40% 20%, rgba(255,255,255,.08), transparent 60%),
+    radial-gradient(900px 500px at 70% 70%, rgba(140,191,159,.10), transparent 60%),
+    #000;
+}
 
-    /* ✅✅ [추가] 모바일 주소창 때문에 vh가 들쭉날쭉한 문제 보정 */
-    @supports (height: 100dvh){
-      .grid{ height: calc(100dvh - var(--headerH)); }
-    }
+.viewer-head{
+  height:44px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:0 14px;
+  border-bottom:1px solid var(--border);
+  background:rgba(0,0,0,.6);
+  font-size:13px;
+}
 
-    .card{
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow:hidden;
-      box-shadow: 0 8px 30px rgba(0,0,0,.25);
-      display:flex;
-      flex-direction:column;
-      min-height: 240px;
-    }
+.viewer-title{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
 
-    .cardHead{
-      display:flex; align-items:center; justify-content:space-between;
-      gap:10px;
-      padding:10px 10px 8px;
-      border-bottom:1px solid rgba(255,255,255,.08);
-      box-sizing:border-box;
-    }
-    .meta{ display:flex; flex-direction:column; gap:4px; min-width:0; }
-    .region{ font-weight:800; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .note{ font-size:11px; color:var(--muted); line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.actions{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:nowrap;
+}
 
-    .headBtns{ display:flex; gap:6px; }
-    .pill{
-      font-size:11px;
-      padding:6px 8px;
-      border-radius:999px;
-      border:1px solid var(--border2);
-      background: rgba(255,255,255,.06);
-      color:var(--text);
-      text-decoration:none;
-      cursor:pointer;
-      white-space:nowrap;
-    }
-    .pill:hover{ border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.10); }
+.stage{
+  height:calc(100% - 44px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:14px;
+}
 
-    .frameWrap{
-      position:relative;
-      background:#111;
-      aspect-ratio: 4 / 3;
-      width:100%;
-      min-height: 260px;
-      flex:none;
-    }
-    iframe{
-      position:absolute; inset:0;
-      width:100%;
-      height:100%;
-      border:0;
-      background:#111;
-    }
+.player{
+  width:min(1200px,100%);
+  background:rgba(255,255,255,.06);
+  border:1px solid var(--border);
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:0 20px 60px rgba(0,0,0,.5);
+}
 
-    .overlay{
-      position:absolute; inset:0;
-      display:flex; align-items:center; justify-content:center;
-      padding:14px;
-      text-align:center;
-      color: rgba(255,255,255,.78);
-      font-size:12px;
-      background: linear-gradient(0deg, rgba(0,0,0,.62), rgba(0,0,0,.38));
-      opacity:0;
-      pointer-events:none;
-      transition: opacity .15s ease;
-    }
-    .overlay.show{ opacity:1; pointer-events:auto; }
-    .overlay .box{
-      border:1px solid rgba(255,255,255,.18);
-      background: rgba(255,255,255,.06);
-      border-radius:12px;
-      padding:10px 12px;
-      max-width:340px;
-    }
-    .overlay .box b{ color:#fff; }
-    .overlay .actions{ margin-top:8px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+.ratio{
+  position:relative;
+  width:100%;
+  padding-top:56.25%;
+  background:#000;
+}
 
-    .toast{
-      position:fixed; left:50%; bottom:14px; transform:translateX(-50%);
-      background: rgba(0,0,0,.7);
-      border: 1px solid rgba(255,255,255,.14);
-      color:#fff;
-      padding:10px 12px;
-      border-radius:12px;
-      font-size:12px;
-      opacity:0;
-      transition: opacity .2s ease;
-      pointer-events:none;
-      z-index:200;
-      max-width: 92vw;
-      white-space: pre-line;
-    }
-    .toast.show{ opacity:1; }
+.ratio iframe{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  border:0;
+  background:#000;
+}
 
-    /* 페이지 전환 감성(관제 느낌): 살짝 페이드 */
-    .grid.fadeOut{ opacity:.18; transition: opacity .18s ease; }
-    .grid.fadeIn{ opacity:1; transition: opacity .18s ease; }
-  </style>
+.placeholder{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  text-align:center;
+  color:rgba(255,255,255,.72);
+  font-size:13px;
+  line-height:1.6;
+  background:
+    radial-gradient(500px 260px at 50% 40%, rgba(140,191,159,.14), transparent 60%),
+    #000;
+}
+
+.block-overlay{
+  position:absolute;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  text-align:center;
+  background:linear-gradient(0deg, rgba(0,0,0,.72), rgba(0,0,0,.45));
+  z-index:3;
+}
+
+.block-overlay.show{
+  display:flex;
+}
+
+.block-box{
+  width:min(420px,100%);
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(20,20,22,.86);
+  border-radius:14px;
+  padding:16px 14px;
+  box-shadow:0 20px 50px rgba(0,0,0,.45);
+}
+
+.block-box b{
+  display:block;
+  margin-bottom:8px;
+  font-size:14px;
+}
+
+.block-box p{
+  margin:0 0 12px 0;
+  color:rgba(255,255,255,.70);
+  font-size:12px;
+  line-height:1.55;
+}
+
+.player-foot{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  padding:12px;
+  font-size:12px;
+  color:var(--muted);
+  border-top:1px solid rgba(255,255,255,.08);
+}
+
+.btn{
+  padding:7px 10px;
+  border-radius:10px;
+  border:1px solid var(--border2);
+  background:rgba(255,255,255,.08);
+  color:#fff;
+  cursor:pointer;
+  font-size:12px;
+  text-decoration:none;
+  white-space:nowrap;
+}
+.btn:hover{
+  background:rgba(255,255,255,.14);
+}
+.btn.primary{
+  background:rgba(140,191,159,.22);
+  border-color:rgba(140,191,159,.48);
+}
+.btn.danger{
+  border-color:rgba(255,107,107,.45);
+  color:#ffd6d6;
+}
+
+.toast{
+  position:fixed;
+  left:50%;
+  bottom:16px;
+  transform:translateX(-50%);
+  z-index:10;
+  padding:10px 12px;
+  border-radius:12px;
+  background:rgba(0,0,0,.75);
+  border:1px solid rgba(255,255,255,.14);
+  color:#fff;
+  font-size:12px;
+  opacity:0;
+  pointer-events:none;
+  transition:.18s ease;
+}
+.toast.show{
+  opacity:1;
+}
+
+/* ================= MOBILE ================= */
+@media (max-width: 780px){
+  body{ overflow:auto; }
+
+  header{
+    height:auto;
+    min-height:var(--headerH);
+    align-items:flex-start;
+    flex-direction:column;
+    justify-content:center;
+    padding:12px 14px;
+  }
+
+  .main{
+    height:auto;
+    min-height:calc(100vh - var(--headerH));
+    grid-template-columns:1fr;
+  }
+
+  .left{
+    max-height:34vh;
+    border-right:0;
+    border-bottom:1px solid var(--border);
+  }
+
+  .right{
+    min-height:66vh;
+  }
+
+  .viewer-head{
+    height:auto;
+    min-height:48px;
+    align-items:flex-start;
+    flex-direction:column;
+    padding:10px 12px;
+  }
+
+  .actions{
+    width:100%;
+    flex-wrap:wrap;
+  }
+
+  .stage{
+    padding:10px;
+  }
+
+  .player-foot{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+}
+</style>
 </head>
 
 <body>
-  <header>
-    <div>
-      <div class="title">CCTV 모니터링</div>
-      <div class="sub" id="statusText">데이터 로딩 중…</div>
+
+<header>
+  <b>CCTV 12권역 모니터링</b>
+  <span id="status">로딩 중…</span>
+</header>
+
+<div class="main">
+  <div class="left" id="list"></div>
+
+  <div class="right">
+    <div class="viewer-head">
+      <span id="viewerTitle" class="viewer-title">좌측에서 CCTV 선택</span>
+      <div class="actions">
+        <a id="openBtn" class="btn primary" target="_blank" rel="noopener noreferrer" style="display:none">새창 재생</a>
+        <button id="copyBtn" class="btn" style="display:none">URL 복사</button>
+        <button id="reloadBtn" class="btn" style="display:none">화면 리로드</button>
+        <button id="hideOverlayBtn" class="btn danger" style="display:none">안내 닫기</button>
+      </div>
     </div>
 
-    <div class="controls">
-      <button class="btn" id="reloadPage">현재 페이지 리로드</button>
-      <button class="btn" id="reloadAll">전체 리로드</button>
-
-      <button class="btn" id="prevPage">◀ 이전</button>
-      <button class="btn" id="nextPage">다음 ▶</button>
-
-      <button class="btn" id="togglePageAuto">페이지 자동넘김: OFF</button>
-      <span class="sub" id="pageInfo">-</span>
-
-      <span class="sub">페이지당</span>
-      <button class="btn" id="minusPerPage">-</button>
-      <span class="sub" id="perPageText">8개</span>
-      <button class="btn" id="plusPerPage">+</button>
-
-      <span class="sub">간격</span>
-      <button class="btn" id="minusSec">-</button>
-      <span class="sub" id="secText">10초</span>
-      <button class="btn" id="plusSec">+</button>
-
-      <button class="btn" id="toggleReloadOnPage">페이지 넘김 시 리로드: OFF</button>
-    </div>
-  </header>
-
-  <div class="grid" id="grid"></div>
-  <div class="toast" id="toast"></div>
-
-  <script>
-    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZZaK8GDz_FZsefh-XoCkPmQhKOugjSRNioC5M8fAUH87iiyQV8KK28wCVN4_dbWJukM-Rbwkkbz_G/pub?gid=1422576665&single=true&output=csv";
-
-    const grid = document.getElementById("grid");
-    const statusText = document.getElementById("statusText");
-    const toast = document.getElementById("toast");
-
-    const reloadAllBtn = document.getElementById("reloadAll");
-    const reloadPageBtn = document.getElementById("reloadPage");
-    const prevPageBtn = document.getElementById("prevPage");
-    const nextPageBtn = document.getElementById("nextPage");
-
-    const togglePageAutoBtn = document.getElementById("togglePageAuto");
-    const pageInfo = document.getElementById("pageInfo");
-
-    const minusPerPageBtn = document.getElementById("minusPerPage");
-    const plusPerPageBtn = document.getElementById("plusPerPage");
-    const perPageText = document.getElementById("perPageText");
-
-    const minusSecBtn = document.getElementById("minusSec");
-    const plusSecBtn = document.getElementById("plusSec");
-    const secText = document.getElementById("secText");
-
-    const toggleReloadOnPageBtn = document.getElementById("toggleReloadOnPage");
-
-    function showToast(msg){
-      toast.textContent = msg;
-      toast.classList.add("show");
-      setTimeout(()=>toast.classList.remove("show"), 2200);
-    }
-
-    function escapeHtml(s){
-      return String(s || "")
-        .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
-        .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
-    }
-    function escapeAttr(s){
-      return String(s || "")
-        .replace(/&/g,"&amp;").replace(/"/g,"&quot;")
-        .replace(/</g,"&lt;").replace(/>/g,"&gt;");
-    }
-
-    function parseCsv(text){
-      const rows = [];
-      let row = [], cur = "", inQ = false;
-      for (let i=0; i<text.length; i++){
-        const ch = text[i];
-        const next = text[i+1];
-
-        if (ch === '"' ){
-          if (inQ && next === '"'){ cur += '"'; i++; }
-          else inQ = !inQ;
-          continue;
-        }
-
-        if (!inQ && ch === ","){
-          row.push(cur); cur=""; continue;
-        }
-
-        if (!inQ && (ch === "\n" || ch === "\r")){
-          if (ch === "\r" && next === "\n") i++;
-          row.push(cur); cur="";
-          if (row.some(c => String(c||"").trim() !== "")) rows.push(row);
-          row = [];
-          continue;
-        }
-        cur += ch;
-      }
-      if (cur.length || row.length){
-        row.push(cur);
-        if (row.some(c => String(c||"").trim() !== "")) rows.push(row);
-      }
-      return rows;
-    }
-
-    function normalizeHeaders(h){
-      return String(h||"").trim().toLowerCase()
-        .replace(/\s+/g,"")
-        .replace(/[\u200b-\u200d\uFEFF]/g,"");
-    }
-
-    function mapCsvToItems(rows){
-      if (!rows || rows.length < 2) return [];
-      const header = rows[0];
-      const idx = {};
-      header.forEach((h, i) => idx[normalizeHeaders(h)] = i);
-
-      const iRegion = idx["region"] ?? idx["권역"] ?? idx["지역"] ?? 0;
-      const iUrl    = idx["url"] ?? idx["링크"] ?? idx["cctv"] ?? idx["주소"] ?? 1;
-      const iNote   = idx["note"] ?? idx["비고"] ?? idx["설명"] ?? 2;
-
-      return rows.slice(1)
-        .map(r => ({
-          region: String(r[iRegion] ?? "").trim(),
-          url: String(r[iUrl] ?? "").trim(),
-          note: String(r[iNote] ?? "").trim()
-        }))
-        .filter(x => x.region && x.url);
-    }
-
-    function withCacheBust(url){
-      if (!url) return "";
-      try{
-        const u = new URL(url);
-        u.searchParams.set("_t", Date.now());
-        return u.toString();
-      }catch(e){
-        return url + (url.includes("?") ? "&" : "?") + "_t=" + Date.now();
-      }
-    }
-
-    function buildCard(item, idx){
-      const region = item.region || "-";
-      const note = item.note || "";
-      const url = item.url || "";
-
-      const card = document.createElement("div");
-      card.className = "card";
-      card.dataset.region = region;
-      card.dataset.url = url;
-
-      card.innerHTML = `
-        <div class="cardHead">
-          <div class="meta">
-            <div class="region">${escapeHtml(region)}</div>
-            <div class="note">${note ? escapeHtml(note) : "&nbsp;"}</div>
+    <div class="stage">
+      <div class="player">
+        <div class="ratio">
+          <div id="placeholder" class="placeholder">
+            좌측 목록에서 권역별 CCTV를 선택해 주세요.<br>
+            일부 CCTV는 보안 정책으로 화면 내 재생이 제한될 수 있습니다.
           </div>
-          <div class="headBtns">
-            <a class="pill" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">새창</a>
-            <button class="pill" data-action="reload">리로드</button>
-          </div>
-        </div>
 
-        <div class="frameWrap">
-          <iframe data-idx="${idx}" src="${escapeAttr(withCacheBust(url))}" loading="lazy"></iframe>
+          <iframe
+            id="viewer"
+            src="about:blank"
+            referrerpolicy="no-referrer"
+            allowfullscreen>
+          </iframe>
 
-          <div class="overlay" id="ov_${idx}">
-            <div class="box">
-              <b>이 화면이 안 보일 수 있어요</b><br/>
-              사이트 보안 정책으로 iframe이 차단된 경우입니다.<br/>
-              <div class="actions">
-                <a class="pill" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">새창으로 보기</a>
-                <button class="pill" data-action="hide">닫기</button>
-              </div>
+          <div id="blockOverlay" class="block-overlay">
+            <div class="block-box">
+              <b>화면 내 재생이 안 될 수 있습니다</b>
+              <p>
+                CCTV 제공 사이트의 보안 정책 때문에 GitHub 화면 안에서는
+                “비정상적인 접근” 또는 빈 화면이 표시될 수 있습니다.<br>
+                이 경우 새창 재생을 눌러 확인해 주세요.
+              </p>
+              <a id="overlayOpenBtn" class="btn primary" target="_blank" rel="noopener noreferrer">새창으로 보기</a>
             </div>
           </div>
         </div>
+
+        <div class="player-foot">
+          <span>※ iframe 차단 시 새창 재생 권장</span>
+          <span>KBS · 경찰청 · 지자체 CCTV</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const CSV_URL =
+"https://docs.google.com/spreadsheets/d/e/2PACX-1vTZZaK8GDz_FZsefh-XoCkPmQhKOugjSRNioC5M8fAUH87iiyQV8KK28wCVN4_dbWJukM-Rbwkkbz_G/pub?gid=1422576665&single=true&output=csv";
+
+const list = document.getElementById("list");
+const viewer = document.getElementById("viewer");
+const viewerTitle = document.getElementById("viewerTitle");
+const openBtn = document.getElementById("openBtn");
+const copyBtn = document.getElementById("copyBtn");
+const reloadBtn = document.getElementById("reloadBtn");
+const hideOverlayBtn = document.getElementById("hideOverlayBtn");
+const overlayOpenBtn = document.getElementById("overlayOpenBtn");
+const blockOverlay = document.getElementById("blockOverlay");
+const placeholder = document.getElementById("placeholder");
+const status = document.getElementById("status");
+const toast = document.getElementById("toast");
+
+let currentUrl = "";
+let currentRegion = "";
+let overlayTimer = null;
+
+function showToast(msg){
+  toast.textContent = msg;
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 2200);
+}
+
+function escapeHtml(s){
+  return String(s || "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+function escapeAttr(s){
+  return String(s || "")
+    .replace(/&/g,"&amp;")
+    .replace(/"/g,"&quot;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;");
+}
+
+/**
+ * CSV 안정 파서
+ * - 쉼표가 포함된 URL/메모
+ * - 큰따옴표 포함
+ * - CRLF/LF 모두 대응
+ */
+function parseCSV(text){
+  const rows = [];
+  let row = [];
+  let cur = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    const n = text[i + 1];
+
+    if (c === '"' && inQuotes && n === '"') {
+      cur += '"';
+      i++;
+      continue;
+    }
+
+    if (c === '"') {
+      inQuotes = !inQuotes;
+      continue;
+    }
+
+    if (c === "," && !inQuotes) {
+      row.push(cur);
+      cur = "";
+      continue;
+    }
+
+    if ((c === "\n" || c === "\r") && !inQuotes) {
+      if (c === "\r" && n === "\n") i++;
+      row.push(cur);
+      cur = "";
+
+      if (row.some(v => String(v || "").trim() !== "")) {
+        rows.push(row);
+      }
+
+      row = [];
+      continue;
+    }
+
+    cur += c;
+  }
+
+  if (cur.length || row.length) {
+    row.push(cur);
+    if (row.some(v => String(v || "").trim() !== "")) {
+      rows.push(row);
+    }
+  }
+
+  return rows;
+}
+
+function normalizeHeader(h){
+  return String(h || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g,"")
+    .replace(/[\u200b-\u200d\uFEFF]/g,"");
+}
+
+function mapRows(rows){
+  if (!rows || rows.length < 2) return [];
+
+  const header = rows[0];
+  const idx = {};
+
+  header.forEach((h, i) => {
+    idx[normalizeHeader(h)] = i;
+  });
+
+  const iRegion = idx["region"] ?? idx["권역"] ?? idx["지역"] ?? 0;
+  const iUrl = idx["url"] ?? idx["링크"] ?? idx["cctv"] ?? idx["주소"] ?? 1;
+  const iNote = idx["note"] ?? idx["비고"] ?? idx["설명"] ?? 2;
+
+  return rows.slice(1)
+    .map(r => ({
+      region: String(r[iRegion] ?? "").trim(),
+      url: String(r[iUrl] ?? "").trim(),
+      note: String(r[iNote] ?? "").trim()
+    }))
+    .filter(d => d.region && d.url);
+}
+
+function withCacheBust(url){
+  if (!url) return "";
+
+  try {
+    const u = new URL(url);
+    u.searchParams.set("_t", Date.now());
+    return u.toString();
+  } catch(e) {
+    return url + (url.includes("?") ? "&" : "?") + "_t=" + Date.now();
+  }
+}
+
+function showBlockOverlay(){
+  if (!currentUrl) return;
+  blockOverlay.classList.add("show");
+  hideOverlayBtn.style.display = "inline-block";
+}
+
+function hideBlockOverlay(){
+  blockOverlay.classList.remove("show");
+  hideOverlayBtn.style.display = "none";
+}
+
+function setViewer(d){
+  currentUrl = d.url;
+  currentRegion = d.region;
+
+  hideBlockOverlay();
+
+  if (overlayTimer) {
+    clearTimeout(overlayTimer);
+    overlayTimer = null;
+  }
+
+  placeholder.style.display = "none";
+
+  viewerTitle.textContent = d.region;
+  openBtn.href = d.url;
+  overlayOpenBtn.href = d.url;
+
+  openBtn.style.display = "inline-block";
+  copyBtn.style.display = "inline-block";
+  reloadBtn.style.display = "inline-block";
+
+  viewer.src = withCacheBust(d.url);
+
+  status.textContent = `${d.region} 선택됨 · ${new Date().toLocaleTimeString("ko-KR")}`;
+
+  /**
+   * iframe 차단은 브라우저 보안상 정확히 감지하기 어렵습니다.
+   * 그래서 3초 후 안내를 띄워 새창 재생을 유도합니다.
+   */
+  overlayTimer = setTimeout(() => {
+    showBlockOverlay();
+  }, 3000);
+}
+
+async function load(){
+  status.textContent = "CSV 로딩 중…";
+  list.innerHTML = "";
+
+  try {
+    const res = await fetch(CSV_URL, { cache:"no-store" });
+
+    if (!res.ok) {
+      throw new Error("CSV HTTP " + res.status);
+    }
+
+    const text = await res.text();
+    const rows = parseCSV(text);
+    const data = mapRows(rows);
+
+    if (!data.length) {
+      status.textContent = "표시할 CCTV 데이터가 없습니다. CSV 컬럼/게시 상태를 확인해 주세요.";
+      list.innerHTML = `
+        <div class="item">
+          <b>데이터 없음</b>
+          <small>구글시트 CSV 게시 상태 또는 컬럼명을 확인해 주세요.</small>
+        </div>
+      `;
+      return;
+    }
+
+    data.forEach((d) => {
+      const div = document.createElement("div");
+      div.className = "item";
+      div.innerHTML = `
+        <b>${escapeHtml(d.region)}</b>
+        <small>${d.note ? escapeHtml(d.note) : "CCTV 바로가기"}</small>
       `;
 
-      card.querySelector('[data-action="reload"]')?.addEventListener("click", () => {
-        const iframe = card.querySelector("iframe");
-        if (!iframe) return;
-        iframe.src = withCacheBust(iframe.src);
-      });
+      div.onclick = () => {
+        document.querySelectorAll(".item").forEach(x => x.classList.remove("active"));
+        div.classList.add("active");
+        setViewer(d);
+      };
 
-      card.querySelector('[data-action="hide"]')?.addEventListener("click", () => {
-        const ov = card.querySelector(".overlay");
-        if (ov) ov.classList.remove("show");
-      });
-
-      return card;
-    }
-
-    // -----------------------------
-    // ✅ 페이징(관제 페이지 넘김)
-    // -----------------------------
-    let allItems = [];
-    let page = 0;
-
-    // 기본값
-    let perPage = 8;          // 한 페이지당 카드 수
-    let pageAutoOn = false;   // 자동 넘김
-    let pageSec = 10;         // 자동 넘김 간격(초)
-    let pageAutoTimer = null;
-
-    // 페이지 이동 시, 현재 페이지 iframe만 리로드할지(옵션)
-    let reloadOnPage = false;
-
-    // ✅✅ [추가] 모바일/작은 화면에서는 기본 페이지당 개수 축소(스크롤도 가능하지만 가독성↑)
-    if (window.matchMedia("(max-width: 900px)").matches) {
-      perPage = 4;
-    }
-
-    function totalPages(){
-      return Math.max(1, Math.ceil(allItems.length / perPage));
-    }
-
-    function clampPage(){
-      const tp = totalPages();
-      if (page < 0) page = tp - 1;
-      if (page >= tp) page = 0;
-    }
-
-    function renderPage({fade=true} = {}){
-      clampPage();
-      const tp = totalPages();
-      const start = page * perPage;
-      const end = start + perPage;
-      const slice = allItems.slice(start, end);
-
-      const now = new Date();
-      statusText.textContent =
-        `표시 ${allItems.length}개 · 마지막 로드: ${now.toLocaleString("ko-KR")} · (시트 수정 시 새로고침하면 반영)`;
-
-      pageInfo.textContent = `페이지 ${page+1}/${tp} · ${perPage}개/페이지`;
-
-      if (fade){
-        grid.classList.remove("fadeIn");
-        grid.classList.add("fadeOut");
-      }
-
-      setTimeout(() => {
-        grid.innerHTML = "";
-        slice.forEach((item, idx) => {
-          const globalIdx = start + idx;
-          grid.appendChild(buildCard(item, globalIdx));
-        });
-
-        grid.classList.remove("fadeOut");
-        grid.classList.add("fadeIn");
-
-        if (reloadOnPage){
-          reloadCurrentPage();
-        }
-      }, fade ? 140 : 0);
-    }
-
-    function goNextPage(){
-      page++;
-      renderPage();
-      showToast("다음 페이지");
-    }
-    function goPrevPage(){
-      page--;
-      renderPage();
-      showToast("이전 페이지");
-    }
-
-    function reloadAll(){
-      document.querySelectorAll(".card iframe").forEach(iframe => {
-        iframe.src = withCacheBust(iframe.src);
-      });
-      showToast("전체 리로드(현재 화면) 완료");
-    }
-
-    function reloadCurrentPage(){
-      document.querySelectorAll(".card iframe").forEach(iframe => {
-        iframe.src = withCacheBust(iframe.src);
-      });
-      showToast("현재 페이지 리로드 완료");
-    }
-
-    function setPageAuto(on){
-      pageAutoOn = on;
-      togglePageAutoBtn.textContent = "페이지 자동넘김: " + (pageAutoOn ? "ON" : "OFF");
-
-      if (pageAutoTimer) clearInterval(pageAutoTimer);
-      pageAutoTimer = null;
-
-      if (pageAutoOn){
-        pageAutoTimer = setInterval(() => {
-          goNextPage();
-        }, pageSec * 1000);
-        showToast("페이지 자동넘김 ON");
-      }else{
-        showToast("페이지 자동넘김 OFF");
-      }
-    }
-
-    function setReloadOnPage(on){
-      reloadOnPage = on;
-      toggleReloadOnPageBtn.textContent = "페이지 넘김 시 리로드: " + (reloadOnPage ? "ON" : "OFF");
-      showToast(reloadOnPage ? "페이지 전환 시 리로드 ON" : "페이지 전환 시 리로드 OFF");
-    }
-
-    function updatePerPageUI(){
-      perPageText.textContent = perPage + "개";
-      renderPage({fade:false});
-    }
-    function updateSecUI(){
-      secText.textContent = pageSec + "초";
-      if (pageAutoOn){
-        setPageAuto(true); // 타이머 재설정
-      }
-    }
-
-    async function loadAndRender(){
-      grid.innerHTML = "";
-      statusText.textContent = "CSV 로딩 중…";
-
-      try{
-        const res = await fetch(CSV_URL, { cache: "no-store" });
-        if (!res.ok) throw new Error("CSV HTTP " + res.status);
-        const text = await res.text();
-
-        const rows = parseCsv(text);
-        const items = mapCsvToItems(rows);
-
-        if (!items.length){
-          statusText.textContent = "CSV 데이터가 비어있거나(또는 컬럼명이 다름) 표시할 항목이 없습니다.";
-          return;
-        }
-
-        allItems = items;
-        page = 0;
-        renderPage({fade:false});
-      }catch(e){
-        statusText.textContent = "로딩 실패: " + (e.message || e);
-      }
-    }
-
-    // -----------------------------
-    // ✅ 이벤트 바인딩
-    // -----------------------------
-    reloadAllBtn.addEventListener("click", reloadAll);
-    reloadPageBtn.addEventListener("click", reloadCurrentPage);
-    nextPageBtn.addEventListener("click", () => goNextPage());
-    prevPageBtn.addEventListener("click", () => goPrevPage());
-
-    togglePageAutoBtn.addEventListener("click", () => setPageAuto(!pageAutoOn));
-
-    minusPerPageBtn.addEventListener("click", () => {
-      perPage = Math.max(4, perPage - 4);
-      updatePerPageUI();
-    });
-    plusPerPageBtn.addEventListener("click", () => {
-      perPage = Math.min(24, perPage + 4);
-      updatePerPageUI();
+      list.appendChild(div);
     });
 
-    minusSecBtn.addEventListener("click", () => {
-      pageSec = Math.max(3, pageSec - 1);
-      updateSecUI();
-    });
-    plusSecBtn.addEventListener("click", () => {
-      pageSec = Math.min(60, pageSec + 1);
-      updateSecUI();
-    });
+    status.textContent = `총 ${data.length}개 · ${new Date().toLocaleTimeString("ko-KR")}`;
 
-    toggleReloadOnPageBtn.addEventListener("click", () => setReloadOnPage(!reloadOnPage));
+  } catch(e) {
+    console.error(e);
+    status.textContent = "로딩 실패: " + (e.message || e);
+    list.innerHTML = `
+      <div class="item">
+        <b>CSV 로딩 실패</b>
+        <small>구글시트 웹 게시 여부와 CSV_URL을 확인해 주세요.</small>
+      </div>
+    `;
+  }
+}
 
-    // 키보드(관제실 느낌): ←/→ 로 페이지 이동, space로 자동넘김 토글
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowRight") { e.preventDefault(); goNextPage(); }
-      if (e.key === "ArrowLeft")  { e.preventDefault(); goPrevPage(); }
-      if (e.key === " ")          { e.preventDefault(); setPageAuto(!pageAutoOn); }
-      if (e.key.toLowerCase() === "r") { e.preventDefault(); reloadCurrentPage(); }
-    });
+copyBtn.onclick = async () => {
+  if (!currentUrl) return;
 
-    // 초기 UI
-    perPageText.textContent = perPage + "개";
-    secText.textContent = pageSec + "초";
-    toggleReloadOnPageBtn.textContent = "페이지 넘김 시 리로드: OFF";
+  try {
+    await navigator.clipboard.writeText(currentUrl);
+    status.textContent = "URL 복사 완료";
+    showToast("URL 복사 완료");
+  } catch(e) {
+    showToast("복사 실패: 브라우저 권한을 확인해 주세요.");
+  }
+};
 
-    loadAndRender();
-  </script>
+reloadBtn.onclick = () => {
+  if (!currentUrl) return;
+  hideBlockOverlay();
+  viewer.src = withCacheBust(currentUrl);
+  status.textContent = `${currentRegion} 리로드 · ${new Date().toLocaleTimeString("ko-KR")}`;
+
+  if (overlayTimer) clearTimeout(overlayTimer);
+  overlayTimer = setTimeout(() => {
+    showBlockOverlay();
+  }, 3000);
+};
+
+hideOverlayBtn.onclick = () => {
+  hideBlockOverlay();
+};
+
+load();
+</script>
 </body>
 </html>
+```
