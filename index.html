@@ -4,84 +4,92 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>GS SHOP CCTV 실시간 관제센터</title>
-
-<!-- m3u8(HLS) 영상 URL 재생용 -->
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<title>GS SHOP 기상 리스크 관제센터</title>
 
 <style>
 :root{
   --bg:#07080a;
   --panel:#111318;
+  --panel2:#171a21;
+  --card:rgba(255,255,255,.06);
   --border:rgba(255,255,255,.12);
-  --border2:rgba(255,255,255,.22);
+  --border2:rgba(255,255,255,.20);
   --text:#f8fafc;
-  --muted:rgba(248,250,252,.62);
-  --accent:#8cbf9f;
-  --danger:#ef4444;
-  --warn:#f59e0b;
-  --ok:#22c55e;
-  --headerH:74px;
-  --gap:10px;
+  --muted:rgba(248,250,252,.64);
+  --green:#8cbf9f;
+  --blue:#60a5fa;
+  --yellow:#facc15;
+  --orange:#fb923c;
+  --red:#ef4444;
+  --headerH:76px;
 }
 
 *{ box-sizing:border-box; }
 
 html,body{
   margin:0;
-  width:100%;
   min-height:100%;
-  background:var(--bg);
+  background:#07080a;
   color:var(--text);
   font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
 }
 
 body{
-  overflow:hidden;
+  overflow:auto;
+}
+
+.wrap{
+  min-height:100vh;
+  background:
+    radial-gradient(900px 500px at 15% 10%, rgba(140,191,159,.13), transparent 60%),
+    radial-gradient(900px 520px at 85% 20%, rgba(96,165,250,.10), transparent 60%),
+    radial-gradient(800px 500px at 50% 90%, rgba(251,146,60,.07), transparent 60%),
+    #07080a;
 }
 
 /* ================= HEADER ================= */
 header{
-  height:var(--headerH);
+  min-height:var(--headerH);
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:14px;
-  padding:12px 16px;
-  background:
-    linear-gradient(90deg, rgba(7,8,10,.98), rgba(17,24,39,.94)),
-    #07080a;
+  gap:16px;
+  padding:16px 22px;
   border-bottom:1px solid var(--border);
+  background:rgba(7,8,10,.82);
+  backdrop-filter:blur(10px);
+  position:sticky;
+  top:0;
+  z-index:10;
 }
 
 .brand{
   display:flex;
   flex-direction:column;
   gap:4px;
-  min-width:220px;
 }
 
 .brand-title{
   display:flex;
   align-items:center;
-  gap:8px;
-  font-size:16px;
+  gap:10px;
+  font-size:18px;
   font-weight:900;
-  letter-spacing:-.2px;
+  letter-spacing:-.3px;
 }
 
 .live-dot{
-  width:9px;
-  height:9px;
+  width:10px;
+  height:10px;
   border-radius:50%;
-  background:var(--ok);
-  box-shadow:0 0 0 0 rgba(34,197,94,.8);
+  background:#22c55e;
+  box-shadow:0 0 0 0 rgba(34,197,94,.85);
   animation:pulse 1.8s infinite;
 }
 
 @keyframes pulse{
-  0%{ box-shadow:0 0 0 0 rgba(34,197,94,.8); }
-  70%{ box-shadow:0 0 0 9px rgba(34,197,94,0); }
+  0%{ box-shadow:0 0 0 0 rgba(34,197,94,.85); }
+  70%{ box-shadow:0 0 0 10px rgba(34,197,94,0); }
   100%{ box-shadow:0 0 0 0 rgba(34,197,94,0); }
 }
 
@@ -90,7 +98,7 @@ header{
   color:var(--muted);
 }
 
-.controls{
+.header-right{
   display:flex;
   align-items:center;
   justify-content:flex-end;
@@ -98,802 +106,586 @@ header{
   flex-wrap:wrap;
 }
 
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:8px 11px;
+  border:1px solid var(--border);
+  border-radius:999px;
+  background:rgba(255,255,255,.05);
+  color:var(--muted);
+  font-size:12px;
+  white-space:nowrap;
+}
+
 .btn{
   border:1px solid var(--border2);
-  background:rgba(255,255,255,.06);
-  color:var(--text);
-  border-radius:10px;
-  padding:8px 10px;
+  background:rgba(255,255,255,.07);
+  color:#fff;
+  border-radius:12px;
+  padding:9px 12px;
   font-size:12px;
+  font-weight:700;
   cursor:pointer;
   text-decoration:none;
-  white-space:nowrap;
 }
 
 .btn:hover{
-  background:rgba(255,255,255,.12);
+  background:rgba(255,255,255,.13);
 }
 
-.btn.on{
-  border-color:rgba(140,191,159,.65);
-  background:rgba(140,191,159,.18);
+/* ================= MAIN ================= */
+main{
+  padding:18px;
+  max-width:1480px;
+  margin:0 auto;
 }
 
-.status-pill{
-  border:1px solid var(--border);
-  background:rgba(255,255,255,.05);
-  border-radius:999px;
-  padding:7px 10px;
-  color:var(--muted);
-  font-size:12px;
-  white-space:nowrap;
-}
-
-/* ================= DASHBOARD ================= */
-.dashboard{
-  height:calc(100vh - var(--headerH));
-  padding:var(--gap);
+/* ================= HERO ================= */
+.hero{
   display:grid;
-  grid-template-columns:repeat(4, minmax(260px, 1fr));
-  gap:var(--gap);
-  overflow:auto;
-  background:
-    radial-gradient(900px 500px at 20% 20%, rgba(140,191,159,.08), transparent 60%),
-    radial-gradient(1000px 600px at 80% 80%, rgba(59,130,246,.06), transparent 60%),
-    #07080a;
+  grid-template-columns:1.25fr .75fr;
+  gap:14px;
+  margin-bottom:14px;
 }
 
-.card{
-  min-height:250px;
-  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+.hero-main{
+  min-height:230px;
   border:1px solid var(--border);
-  border-radius:16px;
-  overflow:hidden;
-  box-shadow:0 10px 30px rgba(0,0,0,.35);
-  display:flex;
-  flex-direction:column;
-}
-
-.card-head{
-  height:52px;
-  padding:8px 10px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  background:rgba(0,0,0,.24);
-  border-bottom:1px solid rgba(255,255,255,.08);
-}
-
-.meta{
-  min-width:0;
-  display:flex;
-  flex-direction:column;
-  gap:2px;
-}
-
-.region{
-  font-size:13px;
-  font-weight:900;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-.note{
-  font-size:11px;
-  color:var(--muted);
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-.card-actions{
-  display:flex;
-  gap:6px;
-  flex:none;
-}
-
-.small-btn{
-  border:1px solid var(--border2);
-  background:rgba(255,255,255,.06);
-  color:var(--text);
-  border-radius:999px;
-  padding:6px 8px;
-  font-size:11px;
-  cursor:pointer;
-  text-decoration:none;
-  white-space:nowrap;
-}
-
-.small-btn:hover{
-  background:rgba(255,255,255,.12);
-}
-
-.screen{
+  border-radius:22px;
+  padding:24px;
+  background:
+    linear-gradient(135deg, rgba(140,191,159,.18), rgba(96,165,250,.08)),
+    rgba(255,255,255,.05);
+  box-shadow:0 18px 50px rgba(0,0,0,.28);
   position:relative;
-  width:100%;
-  aspect-ratio:16/9;
-  background:#000;
-  flex:1;
-  min-height:180px;
+  overflow:hidden;
 }
 
-.screen iframe,
-.screen video{
+.hero-main::after{
+  content:"";
   position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  border:0;
-  background:#000;
+  width:360px;
+  height:360px;
+  right:-120px;
+  top:-140px;
+  border-radius:50%;
+  background:rgba(255,255,255,.07);
 }
 
-.screen video{
-  object-fit:cover;
-}
-
-.loading,
-.error-box,
-.utic-box{
-  position:absolute;
-  inset:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  text-align:center;
-  padding:16px;
-  font-size:12px;
-  line-height:1.55;
-  color:rgba(255,255,255,.76);
-  background:
-    radial-gradient(450px 240px at 50% 45%, rgba(140,191,159,.12), transparent 60%),
-    #000;
-  z-index:3;
-}
-
-.error-box,
-.utic-box{
-  display:none;
-  background:
-    linear-gradient(0deg, rgba(0,0,0,.86), rgba(0,0,0,.66)),
-    #000;
-}
-
-.error-box.show,
-.utic-box.show{
-  display:flex;
-}
-
-.info-inner{
-  max-width:360px;
-  border:1px solid rgba(255,255,255,.16);
-  background:rgba(255,255,255,.06);
-  border-radius:14px;
-  padding:14px;
-}
-
-.info-inner b{
-  display:block;
-  margin-bottom:7px;
-  font-size:13px;
-  color:#fff;
-}
-
-.info-inner p{
-  margin:0 0 12px 0;
-  color:rgba(255,255,255,.72);
-  font-size:12px;
-  line-height:1.55;
-}
-
-.card-foot{
-  min-height:36px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:8px;
-  padding:8px 10px;
-  border-top:1px solid rgba(255,255,255,.08);
-  font-size:11px;
-  color:var(--muted);
-  background:rgba(0,0,0,.20);
-}
-
-.badge{
+.hero-kicker{
   display:inline-flex;
   align-items:center;
-  gap:5px;
+  gap:8px;
+  padding:7px 10px;
   border-radius:999px;
-  padding:4px 7px;
-  background:rgba(255,255,255,.06);
-  border:1px solid rgba(255,255,255,.10);
-  color:rgba(255,255,255,.76);
-  white-space:nowrap;
+  background:rgba(0,0,0,.22);
+  border:1px solid rgba(255,255,255,.12);
+  font-size:12px;
+  color:rgba(255,255,255,.78);
+  margin-bottom:16px;
 }
 
-.badge.ok::before{
-  content:"";
-  width:6px;
-  height:6px;
-  border-radius:50%;
-  background:var(--ok);
+.hero-title{
+  font-size:30px;
+  font-weight:950;
+  line-height:1.22;
+  letter-spacing:-.8px;
+  margin:0 0 12px 0;
 }
 
-.badge.warn::before{
-  content:"";
-  width:6px;
-  height:6px;
-  border-radius:50%;
-  background:var(--warn);
+.hero-desc{
+  max-width:780px;
+  color:rgba(255,255,255,.70);
+  font-size:14px;
+  line-height:1.65;
+  margin:0;
 }
 
-.badge.web::before{
-  content:"";
-  width:6px;
-  height:6px;
-  border-radius:50%;
-  background:#60a5fa;
+.hero-side{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:12px;
 }
 
-.empty{
-  grid-column:1/-1;
-  min-height:240px;
+.mini-card{
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:17px;
+  background:rgba(255,255,255,.055);
+  box-shadow:0 14px 40px rgba(0,0,0,.22);
+}
+
+.mini-label{
+  color:var(--muted);
+  font-size:12px;
+  margin-bottom:8px;
+}
+
+.mini-value{
+  font-size:24px;
+  font-weight:950;
+  letter-spacing:-.5px;
+}
+
+.mini-desc{
+  margin-top:6px;
+  color:rgba(255,255,255,.58);
+  font-size:12px;
+}
+
+/* ================= SUMMARY ================= */
+.summary{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(180px, 1fr));
+  gap:12px;
+  margin-bottom:14px;
+}
+
+.summary-card{
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:16px;
+  background:rgba(255,255,255,.055);
+}
+
+.summary-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+  margin-bottom:12px;
+}
+
+.summary-title{
+  color:var(--muted);
+  font-size:12px;
+}
+
+.summary-icon{
+  width:34px;
+  height:34px;
   display:flex;
   align-items:center;
   justify-content:center;
-  text-align:center;
-  color:var(--muted);
-  border:1px dashed var(--border);
-  border-radius:16px;
-  background:rgba(255,255,255,.04);
-}
-
-.toast{
-  position:fixed;
-  left:50%;
-  bottom:16px;
-  transform:translateX(-50%);
-  z-index:50;
-  padding:10px 12px;
   border-radius:12px;
-  border:1px solid rgba(255,255,255,.16);
-  background:rgba(0,0,0,.78);
-  color:#fff;
-  font-size:12px;
-  opacity:0;
-  pointer-events:none;
-  transition:.18s ease;
+  background:rgba(255,255,255,.07);
 }
 
-.toast.show{
-  opacity:1;
+.summary-value{
+  font-size:21px;
+  font-weight:950;
+}
+
+.summary-sub{
+  margin-top:5px;
+  color:rgba(255,255,255,.56);
+  font-size:12px;
+  line-height:1.45;
+}
+
+/* ================= GRID ================= */
+.section-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:end;
+  gap:12px;
+  margin:22px 0 10px 0;
+}
+
+.section-title{
+  font-size:16px;
+  font-weight:900;
+}
+
+.section-sub{
+  color:var(--muted);
+  font-size:12px;
+}
+
+.region-grid{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(220px, 1fr));
+  gap:12px;
+}
+
+.region-card{
+  border:1px solid var(--border);
+  border-radius:18px;
+  background:rgba(255,255,255,.052);
+  padding:15px;
+  position:relative;
+  overflow:hidden;
+  min-height:135px;
+}
+
+.region-card::after{
+  content:"";
+  position:absolute;
+  width:140px;
+  height:140px;
+  right:-70px;
+  top:-70px;
+  border-radius:50%;
+  background:rgba(255,255,255,.045);
+}
+
+.region-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:8px;
+  position:relative;
+  z-index:1;
+}
+
+.region-name{
+  font-size:14px;
+  font-weight:900;
+}
+
+.level{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:5px 8px;
+  border-radius:999px;
+  font-size:11px;
+  border:1px solid rgba(255,255,255,.13);
+  background:rgba(255,255,255,.06);
+}
+
+.level-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:var(--green);
+}
+
+.region-body{
+  position:relative;
+  z-index:1;
+  margin-top:16px;
+  color:rgba(255,255,255,.66);
+  font-size:12px;
+  line-height:1.55;
+}
+
+.region-foot{
+  position:relative;
+  z-index:1;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-top:14px;
+  color:rgba(255,255,255,.48);
+  font-size:11px;
+}
+
+/* ================= OPS ================= */
+.ops{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:14px;
+}
+
+.ops-card{
+  border:1px solid var(--border);
+  border-radius:20px;
+  background:rgba(255,255,255,.052);
+  padding:17px;
+}
+
+.ops-title{
+  font-size:14px;
+  font-weight:900;
+  margin-bottom:12px;
+}
+
+.check-list{
+  display:grid;
+  gap:10px;
+}
+
+.check{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  color:rgba(255,255,255,.72);
+  font-size:13px;
+  line-height:1.45;
+}
+
+.check-mark{
+  flex:none;
+  width:20px;
+  height:20px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:7px;
+  background:rgba(140,191,159,.16);
+  color:var(--green);
+  font-size:12px;
+  font-weight:900;
+}
+
+.notice{
+  border:1px solid rgba(140,191,159,.22);
+  border-radius:20px;
+  background:linear-gradient(135deg, rgba(140,191,159,.13), rgba(96,165,250,.06));
+  padding:17px;
+}
+
+.notice-title{
+  font-size:14px;
+  font-weight:900;
+  margin-bottom:10px;
+}
+
+.notice p{
+  margin:0;
+  color:rgba(255,255,255,.68);
+  font-size:13px;
+  line-height:1.7;
+}
+
+/* ================= FOOTER ================= */
+footer{
+  padding:22px 18px 28px;
+  text-align:center;
+  color:rgba(255,255,255,.42);
+  font-size:11px;
 }
 
 /* ================= RESPONSIVE ================= */
-@media (max-width:1400px){
-  .dashboard{ grid-template-columns:repeat(3, minmax(260px, 1fr)); }
+@media (max-width:1180px){
+  .region-grid{ grid-template-columns:repeat(3, minmax(220px, 1fr)); }
+  .summary{ grid-template-columns:repeat(2, minmax(180px, 1fr)); }
 }
 
-@media (max-width:980px){
-  body{ overflow:auto; }
-
+@media (max-width:860px){
   header{
-    height:auto;
-    min-height:var(--headerH);
     align-items:flex-start;
     flex-direction:column;
   }
 
-  .controls{
-    justify-content:flex-start;
+  .hero{
+    grid-template-columns:1fr;
   }
 
-  .dashboard{
-    height:auto;
-    min-height:calc(100vh - var(--headerH));
-    grid-template-columns:repeat(2, minmax(220px, 1fr));
+  .region-grid{
+    grid-template-columns:repeat(2, minmax(180px, 1fr));
+  }
+
+  .ops{
+    grid-template-columns:1fr;
   }
 }
 
-@media (max-width:620px){
-  .dashboard{
-    grid-template-columns:1fr;
-  }
+@media (max-width:560px){
+  main{ padding:12px; }
+  .hero-title{ font-size:24px; }
+  .summary{ grid-template-columns:1fr; }
+  .region-grid{ grid-template-columns:1fr; }
 }
 </style>
 </head>
 
 <body>
+<div class="wrap">
 
 <header>
   <div class="brand">
     <div class="brand-title">
       <span class="live-dot"></span>
-      <span>GS SHOP CCTV 실시간 관제센터</span>
+      <span>GS SHOP 기상 리스크 관제센터</span>
     </div>
-    <div class="brand-sub" id="subText">대표CCTV 데이터 로딩 중…</div>
+    <div class="brand-sub">물류·배송 운영 리스크를 빠르게 확인하는 관제 허브</div>
   </div>
 
-  <div class="controls">
-    <span class="status-pill" id="countText">-</span>
-    <span class="status-pill" id="refreshText">자동새로고침 60초</span>
-    <button class="btn" id="reloadBtn">전체 리로드</button>
-    <button class="btn on" id="autoBtn">자동새로고침 ON</button>
-    <button class="btn" id="fitBtn">화면맞춤</button>
+  <div class="header-right">
+    <span class="pill" id="nowText">-</span>
+    <span class="pill">자동 관제 모드</span>
+    <button class="btn" onclick="location.reload()">새로고침</button>
   </div>
 </header>
 
-<main class="dashboard" id="dashboard"></main>
-<div class="toast" id="toast"></div>
+<main>
+
+  <section class="hero">
+    <div class="hero-main">
+      <div class="hero-kicker">📡 WEATHER RISK CONTROL CENTER</div>
+      <h1 class="hero-title">
+        전국 12권역 기상 리스크를<br>
+        한 화면에서 빠르게 확인합니다.
+      </h1>
+      <p class="hero-desc">
+        기상특보, 강수·적설 가능성, 권역별 배송 영향도를 중심으로
+        물류 운영 관점의 모니터링이 가능하도록 구성한 관제 화면입니다.
+        CCTV 직접 재생 기능은 제외하고, 기상 리스크 판단과 운영 대응에 집중합니다.
+      </p>
+    </div>
+
+    <div class="hero-side">
+      <div class="mini-card">
+        <div class="mini-label">관제 상태</div>
+        <div class="mini-value">정상 운영</div>
+        <div class="mini-desc">기상 데이터 기반 상시 모니터링</div>
+      </div>
+
+      <div class="mini-card">
+        <div class="mini-label">확인 권역</div>
+        <div class="mini-value">12개 권역</div>
+        <div class="mini-desc">수도권·강원·충청·호남·영남·제주</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="summary">
+    <div class="summary-card">
+      <div class="summary-top">
+        <div class="summary-title">오늘 기준</div>
+        <div class="summary-icon">🟢</div>
+      </div>
+      <div class="summary-value">양호</div>
+      <div class="summary-sub">특이사항 발생 시 메일 관제 결과 기준으로 확인</div>
+    </div>
+
+    <div class="summary-card">
+      <div class="summary-top">
+        <div class="summary-title">내일 기준</div>
+        <div class="summary-icon">🔵</div>
+      </div>
+      <div class="summary-value">관찰</div>
+      <div class="summary-sub">전일 대비 변동 권역 중심으로 확인</div>
+    </div>
+
+    <div class="summary-card">
+      <div class="summary-top">
+        <div class="summary-title">특보 확인</div>
+        <div class="summary-icon">📢</div>
+      </div>
+      <div class="summary-value">상시</div>
+      <div class="summary-sub">주의보·경보 발효 시 메일 본문 상단 표기</div>
+    </div>
+
+    <div class="summary-card">
+      <div class="summary-top">
+        <div class="summary-title">운영 대응</div>
+        <div class="summary-icon">🚚</div>
+      </div>
+      <div class="summary-value">모니터링</div>
+      <div class="summary-sub">배송지연 가능성 발생 시 권역별 판단</div>
+    </div>
+  </section>
+
+  <div class="section-head">
+    <div>
+      <div class="section-title">12권역 관제 현황</div>
+      <div class="section-sub">메일 관제 결과와 함께 권역별 상태를 확인하는 화면입니다.</div>
+    </div>
+  </div>
+
+  <section class="region-grid" id="regionGrid"></section>
+
+  <section class="ops">
+    <div class="ops-card">
+      <div class="ops-title">운영 체크리스트</div>
+      <div class="check-list">
+        <div class="check">
+          <span class="check-mark">✓</span>
+          <span>기상특보 발효 권역은 메일 상단 특보 박스 우선 확인</span>
+        </div>
+        <div class="check">
+          <span class="check-mark">✓</span>
+          <span>주의보급 이상 권역은 배송지연 가능성 및 출고 흐름 확인</span>
+        </div>
+        <div class="check">
+          <span class="check-mark">✓</span>
+          <span>강수·적설 확대 시 권역별 고객 안내 필요 여부 검토</span>
+        </div>
+        <div class="check">
+          <span class="check-mark">✓</span>
+          <span>기상 변화가 큰 권역은 당일·익일 리스크를 분리해서 판단</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="notice">
+      <div class="notice-title">관제센터 운영 기준</div>
+      <p>
+        본 화면은 CCTV 직접 재생이 아닌, 기상 리스크 관제용 허브 화면입니다.
+        실제 기상 판단은 기상청 API 기반 메일 결과와 첨부 CSV를 기준으로 확인합니다.
+        권역별 영향이 확대될 경우 배송 운영 관점에서 고객 안내, 출고 흐름, 택배사 이슈를 함께 검토합니다.
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  GS SHOP Logistics Planning · Weather Risk Control Center
+</footer>
+
+</div>
 
 <script>
-/**
- * 대표CCTV 시트 CSV
- * 권장 컬럼:
- * region | url | note | cctvName | coordX | coordY | updatedAt
- */
-const CSV_URL =
-"https://docs.google.com/spreadsheets/d/e/2PACX-1vTZZaK8GDz_FZsefh-XoCkPmQhKOugjSRNioC5M8fAUH87iiyQV8KK28wCVN4_dbWJukM-Rbwkkbz_G/pub?gid=1422576665&single=true&output=csv";
+const regions = [
+  { name:"수도권(서울)", desc:"서울권 배송 흐름 및 도심권 기상 영향 확인", level:"양호", color:"green" },
+  { name:"수도권(경기)", desc:"경기 남·북부 권역의 강수·적설 영향 확인", level:"관찰", color:"blue" },
+  { name:"수도권(인천)", desc:"인천·영종·서해권 기상 변동 확인", level:"관찰", color:"blue" },
+  { name:"강원(영서)", desc:"내륙권 적설·결빙 가능성 중심 확인", level:"관찰", color:"blue" },
+  { name:"강원(영동)", desc:"동해안 강풍·대설 가능성 중심 확인", level:"주의", color:"yellow" },
+  { name:"충청(충남)", desc:"서해안 강수 및 도로 여건 변동 확인", level:"양호", color:"green" },
+  { name:"충청(충북)", desc:"내륙권 기온 하강·결빙 가능성 확인", level:"양호", color:"green" },
+  { name:"호남(전북)", desc:"서해안·내륙 강수 변동 가능성 확인", level:"양호", color:"green" },
+  { name:"호남(전남)", desc:"남해안·도서권 기상 변동 확인", level:"관찰", color:"blue" },
+  { name:"영남(경북)", desc:"동해안·내륙권 기상 영향 확인", level:"양호", color:"green" },
+  { name:"영남(경남)", desc:"부산·울산·경남권 강수 흐름 확인", level:"양호", color:"green" },
+  { name:"제주", desc:"강풍·호우·항공/해상 영향 가능성 확인", level:"관찰", color:"blue" }
+];
 
-const dashboard = document.getElementById("dashboard");
-const subText = document.getElementById("subText");
-const countText = document.getElementById("countText");
-const refreshText = document.getElementById("refreshText");
-const reloadBtn = document.getElementById("reloadBtn");
-const autoBtn = document.getElementById("autoBtn");
-const fitBtn = document.getElementById("fitBtn");
-const toast = document.getElementById("toast");
+const colorMap = {
+  green:"#8cbf9f",
+  blue:"#60a5fa",
+  yellow:"#facc15",
+  orange:"#fb923c",
+  red:"#ef4444"
+};
 
-let items = [];
-let autoRefresh = true;
-let refreshSec = 60;
-let refreshTimer = null;
-let fitMode = false;
-let hlsPlayers = [];
+function renderRegions(){
+  const grid = document.getElementById("regionGrid");
 
-function showToast(msg){
-  toast.textContent = msg;
-  toast.classList.add("show");
-  setTimeout(() => toast.classList.remove("show"), 2200);
-}
-
-function escapeHtml(s){
-  return String(s || "")
-    .replace(/&/g,"&amp;")
-    .replace(/</g,"&lt;")
-    .replace(/>/g,"&gt;")
-    .replace(/"/g,"&quot;")
-    .replace(/'/g,"&#039;");
-}
-
-function escapeAttr(s){
-  return String(s || "")
-    .replace(/&/g,"&amp;")
-    .replace(/"/g,"&quot;")
-    .replace(/</g,"&lt;")
-    .replace(/>/g,"&gt;");
-}
-
-function parseCSV(text){
-  const rows = [];
-  let row = [];
-  let cur = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    const n = text[i + 1];
-
-    if (c === '"' && inQuotes && n === '"') {
-      cur += '"';
-      i++;
-      continue;
-    }
-
-    if (c === '"') {
-      inQuotes = !inQuotes;
-      continue;
-    }
-
-    if (c === "," && !inQuotes) {
-      row.push(cur);
-      cur = "";
-      continue;
-    }
-
-    if ((c === "\n" || c === "\r") && !inQuotes) {
-      if (c === "\r" && n === "\n") i++;
-      row.push(cur);
-      cur = "";
-
-      if (row.some(v => String(v || "").trim() !== "")) rows.push(row);
-      row = [];
-      continue;
-    }
-
-    cur += c;
-  }
-
-  if (cur.length || row.length) {
-    row.push(cur);
-    if (row.some(v => String(v || "").trim() !== "")) rows.push(row);
-  }
-
-  return rows;
-}
-
-function normalizeHeader(h){
-  return String(h || "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g,"")
-    .replace(/[\u200b-\u200d\uFEFF]/g,"");
-}
-
-function mapRows(rows){
-  if (!rows || rows.length < 2) return [];
-
-  const header = rows[0];
-  const idx = {};
-
-  header.forEach((h, i) => {
-    idx[normalizeHeader(h)] = i;
-  });
-
-  const iRegion = idx["region"] ?? idx["권역"] ?? idx["지역"] ?? 0;
-  const iUrl = idx["url"] ?? idx["링크"] ?? idx["cctv"] ?? idx["주소"] ?? 1;
-  const iNote = idx["note"] ?? idx["비고"] ?? idx["설명"] ?? 2;
-  const iName = idx["cctvname"] ?? idx["cctv명"] ?? idx["이름"] ?? 3;
-  const iUpdated = idx["updatedat"] ?? idx["갱신일시"] ?? idx["수정일시"] ?? 6;
-
-  return rows.slice(1)
-    .map(r => ({
-      region: String(r[iRegion] ?? "").trim(),
-      url: String(r[iUrl] ?? "").trim(),
-      note: String(r[iNote] ?? "").trim(),
-      name: String(r[iName] ?? "").trim(),
-      updatedAt: String(r[iUpdated] ?? "").trim()
-    }))
-    .filter(x => x.region && x.url);
-}
-
-function withCacheBust(url){
-  if (!url) return "";
-
-  try{
-    const u = new URL(url);
-    u.searchParams.set("_t", Date.now());
-    return u.toString();
-  }catch(e){
-    return url + (url.includes("?") ? "&" : "?") + "_t=" + Date.now();
-  }
-}
-
-function isHlsUrl(url){
-  const u = String(url || "").toLowerCase();
-  return u.includes(".m3u8") || u.includes("m3u8");
-}
-
-function isUticPageUrl(url){
-  const u = String(url || "").toLowerCase();
-  return u.includes("utic.go.kr") || u.includes("www.utic.go.kr");
-}
-
-function clearHlsPlayers(){
-  hlsPlayers.forEach(hls => {
-    try{ hls.destroy(); }catch(e){}
-  });
-  hlsPlayers = [];
-}
-
-function getMode(item){
-  if (isHlsUrl(item.url)) return "HLS";
-  if (isUticPageUrl(item.url)) return "UTIC";
-  return "WEB";
-}
-
-function getBadgeClass(mode){
-  if (mode === "HLS") return "ok";
-  if (mode === "UTIC") return "warn";
-  return "web";
-}
-
-function buildCard(item, index){
-  const card = document.createElement("section");
-  card.className = "card";
-
-  const label = item.name || item.note || "CCTV";
-  const mode = getMode(item);
-  const badgeClass = getBadgeClass(mode);
-
-  card.innerHTML = `
-    <div class="card-head">
-      <div class="meta">
-        <div class="region">${escapeHtml(item.region)}</div>
-        <div class="note">${escapeHtml(label)}</div>
-      </div>
-      <div class="card-actions">
-        <a class="small-btn" href="${escapeAttr(item.url)}" target="_blank" rel="noopener noreferrer">새창</a>
-        <button class="small-btn" data-action="reload">리로드</button>
-      </div>
-    </div>
-
-    <div class="screen" id="screen_${index}">
-      <div class="loading">CCTV 연결 중…</div>
-
-      <div class="utic-box" id="utic_${index}">
-        <div class="info-inner">
-          <b>UTIC 새창 확인 필요</b>
-          <p>
-            국가교통정보센터 페이지는 보안 정책상 외부 화면에 삽입하면
-            “비정상적인 접근”으로 차단될 수 있습니다.<br>
-            실시간 CCTV는 새창에서 확인해 주세요.
-          </p>
-          <a class="small-btn" href="${escapeAttr(item.url)}" target="_blank" rel="noopener noreferrer">새창으로 보기</a>
+  grid.innerHTML = regions.map(r => `
+    <article class="region-card">
+      <div class="region-top">
+        <div class="region-name">${r.name}</div>
+        <div class="level">
+          <span class="level-dot" style="background:${colorMap[r.color]};"></span>
+          ${r.level}
         </div>
       </div>
-
-      <div class="error-box" id="err_${index}">
-        <div class="info-inner">
-          <b>화면 내 재생 제한</b>
-          <p>
-            CCTV URL 형식 또는 제공 사이트 정책에 따라 관제센터 내부 재생이 안 될 수 있습니다.<br>
-            아래 버튼으로 새창 확인을 권장합니다.
-          </p>
-          <a class="small-btn" href="${escapeAttr(item.url)}" target="_blank" rel="noopener noreferrer">새창으로 보기</a>
-        </div>
+      <div class="region-body">${r.desc}</div>
+      <div class="region-foot">
+        <span>기상 리스크 관제</span>
+        <span>상시 확인</span>
       </div>
-    </div>
-
-    <div class="card-foot">
-      <span class="badge ${badgeClass}">${mode}</span>
-      <span>${escapeHtml(item.updatedAt || "실시간 연결")}</span>
-    </div>
-  `;
-
-  card.querySelector('[data-action="reload"]').addEventListener("click", () => {
-    reloadOne(card, item, index);
-  });
-
-  return card;
+    </article>
+  `).join("");
 }
 
-function mountViewer(card, item, index){
-  const screen = card.querySelector(`#screen_${index}`);
-  const loading = screen.querySelector(".loading");
-  const errorBox = screen.querySelector(`#err_${index}`);
-  const uticBox = screen.querySelector(`#utic_${index}`);
-
-  if (!screen) return;
-
-  const oldFrame = screen.querySelector("iframe");
-  const oldVideo = screen.querySelector("video");
-
-  if (oldFrame) oldFrame.remove();
-  if (oldVideo) oldVideo.remove();
-
-  loading.style.display = "flex";
-  errorBox.classList.remove("show");
-  uticBox.classList.remove("show");
-
-  const url = withCacheBust(item.url);
-
-  /**
-   * ✅ 중요:
-   * UTIC 웹페이지는 iframe 삽입 시 "비정상적인 접근" 팝업이 뜸.
-   * 따라서 UTIC 페이지는 관제센터 내부 재생을 시도하지 않고 새창 안내만 표시.
-   */
-  if (isUticPageUrl(item.url) && !isHlsUrl(item.url)) {
-    loading.style.display = "none";
-    uticBox.classList.add("show");
-    return;
-  }
-
-  /**
-   * m3u8 영상 URL이면 HLS 실시간 재생 시도
-   */
-  if (isHlsUrl(item.url)) {
-    const video = document.createElement("video");
-    video.muted = true;
-    video.autoplay = true;
-    video.controls = true;
-    video.playsInline = true;
-
-    screen.appendChild(video);
-
-    if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = url;
-    } else if (window.Hls && Hls.isSupported()) {
-      const hls = new Hls({
-        liveSyncDuration: 6,
-        maxLiveSyncPlaybackRate: 1.5,
-        enableWorker: true
-      });
-
-      hls.loadSource(url);
-      hls.attachMedia(video);
-      hlsPlayers.push(hls);
-
-      hls.on(Hls.Events.ERROR, function(event, data) {
-        if (data && data.fatal) {
-          loading.style.display = "none";
-          errorBox.classList.add("show");
-        }
-      });
-    } else {
-      loading.style.display = "none";
-      errorBox.classList.add("show");
-      return;
-    }
-
-    video.addEventListener("loadeddata", () => {
-      loading.style.display = "none";
-    });
-
-    video.addEventListener("playing", () => {
-      loading.style.display = "none";
-    });
-
-    video.addEventListener("error", () => {
-      loading.style.display = "none";
-      errorBox.classList.add("show");
-    });
-
-    setTimeout(() => {
-      if (loading.style.display !== "none") {
-        loading.style.display = "none";
-      }
-    }, 5000);
-
-    return;
-  }
-
-  /**
-   * 일반 웹 URL은 iframe 시도
-   * 단, UTIC는 위에서 이미 차단 처리함.
-   */
-  const iframe = document.createElement("iframe");
-  iframe.src = url;
-  iframe.referrerPolicy = "no-referrer";
-  iframe.allowFullscreen = true;
-  iframe.loading = "lazy";
-
-  screen.appendChild(iframe);
-
-  iframe.addEventListener("load", () => {
-    loading.style.display = "none";
-  });
-
-  setTimeout(() => {
-    loading.style.display = "none";
-  }, 4000);
-}
-
-function render(){
-  clearHlsPlayers();
-  dashboard.innerHTML = "";
-
-  if (!items.length) {
-    dashboard.innerHTML = `
-      <div class="empty">
-        표시할 CCTV 데이터가 없습니다.<br>
-        대표CCTV 시트의 region / url 컬럼과 웹 게시 상태를 확인해 주세요.
-      </div>
-    `;
-    countText.textContent = "0개";
-    return;
-  }
-
-  items.forEach((item, index) => {
-    const card = buildCard(item, index);
-    dashboard.appendChild(card);
-    mountViewer(card, item, index);
-  });
-
+function updateNow(){
+  const el = document.getElementById("nowText");
   const now = new Date();
-  const updated = items.find(x => x.updatedAt)?.updatedAt || "-";
-
-  countText.textContent = `${items.length}개 권역`;
-  subText.textContent = `마지막 화면 로드: ${now.toLocaleString("ko-KR")} · CCTV 데이터 갱신: ${updated}`;
+  el.textContent = now.toLocaleString("ko-KR");
 }
 
-function reloadOne(card, item, index){
-  mountViewer(card, item, index);
-  showToast(`${item.region} 리로드`);
-}
-
-function reloadAll(){
-  render();
-  showToast("전체 CCTV 리로드 완료");
-}
-
-async function loadData(){
-  subText.textContent = "대표CCTV 데이터 로딩 중…";
-
-  try{
-    const res = await fetch(CSV_URL, { cache:"no-store" });
-    if (!res.ok) throw new Error("CSV HTTP " + res.status);
-
-    const text = await res.text();
-    const rows = parseCSV(text);
-    items = mapRows(rows);
-
-    render();
-
-  }catch(e){
-    console.error(e);
-    dashboard.innerHTML = `
-      <div class="empty">
-        CSV 로딩 실패<br>
-        ${escapeHtml(e.message || e)}<br><br>
-        구글시트 웹 게시 상태와 CSV_URL을 확인해 주세요.
-      </div>
-    `;
-    subText.textContent = "CSV 로딩 실패";
-    countText.textContent = "-";
-  }
-}
-
-function startAutoRefresh(){
-  if (refreshTimer) clearInterval(refreshTimer);
-
-  if (!autoRefresh) {
-    refreshText.textContent = "자동새로고침 OFF";
-    autoBtn.textContent = "자동새로고침 OFF";
-    autoBtn.classList.remove("on");
-    return;
-  }
-
-  refreshText.textContent = `자동새로고침 ${refreshSec}초`;
-  autoBtn.textContent = "자동새로고침 ON";
-  autoBtn.classList.add("on");
-
-  refreshTimer = setInterval(() => {
-    loadData();
-    showToast("자동 새로고침");
-  }, refreshSec * 1000);
-}
-
-reloadBtn.addEventListener("click", () => {
-  loadData();
-});
-
-autoBtn.addEventListener("click", () => {
-  autoRefresh = !autoRefresh;
-  startAutoRefresh();
-  showToast(autoRefresh ? "자동새로고침 ON" : "자동새로고침 OFF");
-});
-
-fitBtn.addEventListener("click", () => {
-  fitMode = !fitMode;
-
-  if (fitMode) {
-    dashboard.style.gridTemplateColumns = "repeat(4, minmax(220px, 1fr))";
-    fitBtn.classList.add("on");
-    showToast("화면맞춤 모드");
-  } else {
-    dashboard.style.gridTemplateColumns = "";
-    fitBtn.classList.remove("on");
-    showToast("기본 화면 모드");
-  }
-});
-
-window.addEventListener("keydown", (e) => {
-  if (e.key.toLowerCase() === "r") {
-    e.preventDefault();
-    loadData();
-  }
-
-  if (e.key === " ") {
-    e.preventDefault();
-    autoRefresh = !autoRefresh;
-    startAutoRefresh();
-  }
-});
-
-loadData();
-startAutoRefresh();
+renderRegions();
+updateNow();
+setInterval(updateNow, 1000);
 </script>
 
 </body>
